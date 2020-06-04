@@ -1,3 +1,6 @@
 .vscode/settings.json
 fra-eng/_about.txt
 fra-eng/fra.txt
+.data
+s2s.h5
+tut1-model.pt
