@@ -74,7 +74,7 @@ train_iterator, valid_iterator, test_iterator = BucketIterator.splits(
     batch_size=BATCH_SIZE,
     device=device)
 
-
+# hiden をdecoderに渡す
 class Encoder(nn.Module):
     def __init__(self, input_dim, emb_dim, hid_dim, n_layers, dropout):
         super().__init__()
@@ -195,7 +195,7 @@ class Seq2Seq(nn.Module):
 
         for t in range(1, trg_len):
 
-            # insert input token embedding, previous hidden and previous cell states
+            # insert input token embedding, previous hidden and previous cell statesc
             # receive output tensor (predictions) and new hidden and cell states
             output, hidden, cell = self.decoder(input, hidden, cell)
 
