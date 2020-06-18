@@ -19,7 +19,7 @@ class SimpleRnnlm:
         #レイヤの生成
         self.layers = [
             TimeEmbedding(embed_W),
-            TimeRNN(rnn_Wx, rnn_Wh, rnn_b, stateful=True)
+            TimeRNN(rnn_Wx, rnn_Wh, rnn_b, stateful=True),
             TimeAffine(affine_W, affine_b)
         ]
         self.loss_layer = TimeSoftmaxWithLoss()
@@ -29,4 +29,19 @@ class SimpleRnnlm:
         self.params, self.grads = [], []
         for layer in self.layers:
             self.params += layer.params
-            self.params += layer.grads
+            self.grads += layer.grads
+
+    def forward(self, xs, ts):
+        for layer in self.layers:
+            xs = layer.forward(xs)
+        loss = self.loss_layer.forward(xs, ts)
+        return loss
+
+    def backward(self, dout=1):
+        dout = self.loss_layer.backward(dout)
+        for layer in reversed(self.layers):
+            dout = layer.backward(dout)
+        return dout
+
+    def reset_state(self):
+        self.rnn_layer.reset_state()

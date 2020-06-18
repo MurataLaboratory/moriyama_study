@@ -2,7 +2,7 @@
 from common.np import *  # import numpy as np (or import cupy as np)
 from common.layers import *
 from common.functions import softmax, sigmoid
-
+import cupy as cp
 
 class RNN:
     def __init__(self, Wx, Wh, b):
@@ -314,6 +314,7 @@ class TimeSoftmaxWithLoss:
 
         ys = softmax(xs)
         ls = np.log(ys[np.arange(N * T), ts])
+        mask = cp.asarray(mask.astype(int))
         ls *= mask  # ignore_labelに該当するデータは損失を0にする
         loss = -np.sum(ls)
         loss /= mask.sum()
