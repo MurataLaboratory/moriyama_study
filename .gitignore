@@ -7,3 +7,6 @@ tut1-model.pt
 data
 deep-learning-from-scrach-2
 DL_from_scrach/dataset
+*.pyc
+*.npy
+ptb.test.txt
