@@ -9,5 +9,6 @@ deep-learning-from-scrach-2
 DL_from_scrach/dataset
 *.pyc
 *.npy
-ptb.test.txt
+ptb.test.tx
+ptb.valid.txt
 *.pkl
