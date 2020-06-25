@@ -10,3 +10,4 @@ DL_from_scrach/dataset
 *.pyc
 *.npy
 ptb.test.txt
+*.pkl
