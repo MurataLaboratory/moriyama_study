@@ -9,6 +9,12 @@
 
 現状のゴールは Transformer とか Bert を目標にする
 
+- 文献
+
+  [Attention Is All You Need](https://arxiv.org/abs/1706.03762)
+
+  [BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding](https://arxiv.org/abs/1810.04805)
+
 ### 6/18
 
 ゼロから DL の RNN の章の読了
