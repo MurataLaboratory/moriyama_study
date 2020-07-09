@@ -80,6 +80,8 @@ Encoder は入力情報をエンコードして Decoder はそれをもとに出
 
 ### 7/9
 
-Attentionを作った
+ゼロから作る DL を読了した
 
 イマイチ式とコードのイメージがつながらない
+
+[中間発表用のスライドはこちら](https://kosenjp-my.sharepoint.com/:p:/g/personal/31540_toyota_kosen-ac_jp/ERB6GWA25h9EqEwibb21uE4B8uzeLus7C9gXFM_P-c1mYw?e=u1dPOk)
