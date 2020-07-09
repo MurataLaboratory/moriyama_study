@@ -12,3 +12,5 @@ DL_from_scrach/dataset
 ptb.*
 *.pkl
 *.xml
+narrative-response_train.txt
+.idea
