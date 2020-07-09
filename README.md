@@ -77,3 +77,9 @@ Encoder は入力情報をエンコードして Decoder はそれをもとに出
 
 今のモデルではデコーダのの最初の LSTM&Affine しか受け取れないので全体に行き渡るようにする
 (Peekydeocder,PeekySeq2seq に実装済み)
+
+### 7/9
+
+Attentionを作った
+
+イマイチ式とコードのイメージがつながらない
