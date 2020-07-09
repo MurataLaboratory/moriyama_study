@@ -11,3 +11,4 @@ DL_from_scrach/dataset
 *.npy
 ptb.*
 *.pkl
+*.xml
