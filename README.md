@@ -31,13 +31,18 @@ seq2seq ベースの生成方法の改良
 
   [BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding](https://arxiv.org/abs/1810.04805)
 
-### 6/18
+<details>
+
+<summary>6/18</summary>
 
 ゼロから DL の RNN の章の読了
 
 LSTM を始めた
 
-### 6/25
+</details >
+
+<details>
+<summary> 6/25</summary>
 
 ６章 LSTM の章が終わった
 
@@ -55,7 +60,11 @@ LSTM におけるモデルの精度向上手段などについて学んだ。
 
 前の章で保存しておいたモデルの重みを使って文章の生成をためした。
 
-### 7/2
+</details>
+
+<details>
+
+<summary>7/2 </summary>
 
 7 章 seq2seq に入った
 
@@ -78,7 +87,11 @@ Encoder は入力情報をエンコードして Decoder はそれをもとに出
 今のモデルではデコーダのの最初の LSTM&Affine しか受け取れないので全体に行き渡るようにする
 (Peekydeocder,PeekySeq2seq に実装済み)
 
-### 7/9
+</details>
+
+<details>
+
+<summary>7/9</summary>
 
 ゼロから作る DL を読了した
 
@@ -107,3 +120,4 @@ Encoder は入力情報をエンコードして Decoder はそれをもとに出
 2. 内積を用いてベクトル間の類似度を計算する
 
 これらの層を組み合わせることで Attention を実現する
+</details>
