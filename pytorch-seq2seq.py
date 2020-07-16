@@ -25,7 +25,7 @@ torch.backends.cudnn.deterministic = True
 spacy_de = spacy.load('de')
 spacy_en = spacy.load('en')
 
-
+# ここでは順番をヒックリ返すだけ
 def tokenize_de(text):
     """
     Tokenizes German text from a string into a list of strings (tokens) and reverses it
@@ -40,17 +40,20 @@ def tokenize_en(text):
     return [tok.text for tok in spacy_en.tokenizer(text)]
 
 
+# ここで文字列をリストに変換している
+# 生成元の言語（この場合は英語）
 SRC = Field(tokenize=tokenize_de,
             init_token='<sos>',
             eos_token='<eos>',
             lower=True)
 
+# 生成する言語（この場合はドイツ語）
 TRG = Field(tokenize=tokenize_en,
             init_token='<sos>',
             eos_token='<eos>',
             lower=True)
 
-
+# split data into test and train
 train_data, valid_data, test_data = Multi30k.splits(exts=('.de', '.en'),
                                                     fields=(SRC, TRG))
 
@@ -67,7 +70,7 @@ print(f"Unique tokens in target (en) vocabulary: {len(TRG.vocab)}")
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-BATCH_SIZE = 128
+BATCH_SIZE = 64
 
 train_iterator, valid_iterator, test_iterator = BucketIterator.splits(
     (train_data, valid_data, test_data),
