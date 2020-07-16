@@ -21,15 +21,19 @@ seq2seq ベースの生成方法の改良
 
 システムとしてよりユーザーに傾聴を届ける
 
-- 文献
+<details>
 
-  [系列変換モデルに基づく傾聴的な応答表現の生成](https://anlp.jp/proceedings/annual_meeting/2018/pdf_dir/P7-17.pdf)
+<summary>文献</summary>
 
-  [語りの傾聴において表出する応答データの拡充](https://www.anlp.jp/proceedings/annual_meeting/2020/pdf_dir/P1-33.pdf)
+[系列変換モデルに基づく傾聴的な応答表現の生成](https://anlp.jp/proceedings/annual_meeting/2018/pdf_dir/P7-17.pdf)
 
-  [Attention Is All You Need](https://arxiv.org/abs/1706.03762)
+[語りの傾聴において表出する応答データの拡充](https://www.anlp.jp/proceedings/annual_meeting/2020/pdf_dir/P1-33.pdf)
 
-  [BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding](https://arxiv.org/abs/1810.04805)
+[Attention Is All You Need](https://arxiv.org/abs/1706.03762)
+
+[BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding](https://arxiv.org/abs/1810.04805)
+
+</details>
 
 <details>
 
@@ -120,4 +124,18 @@ Encoder は入力情報をエンコードして Decoder はそれをもとに出
 2. 内積を用いてベクトル間の類似度を計算する
 
 これらの層を組み合わせることで Attention を実現する
+
+</details>
+
+<details>
+<summary>7/16</summary>
+
+pytorchのサンプルを動かすときのspaCyのモデルは管理者権限でインストールする
+
+発表用のプレゼンを完成させた
+
+そろそろ pytorch を使ってモデルを作っていきたいので、まずは、前処理について調べている。
+
+学習データは、タブ区切りで，左側が語り，右側が傾聴応答．語り，応答とも半角スペースで形態素に区切っています．
+
 </details>
