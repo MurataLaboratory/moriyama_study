@@ -26,6 +26,8 @@ spacy_de = spacy.load('de')
 spacy_en = spacy.load('en')
 
 # ここでは順番をヒックリ返すだけ
+
+
 def tokenize_de(text):
     """
     Tokenizes German text from a string into a list of strings (tokens) and reverses it
@@ -57,6 +59,8 @@ TRG = Field(tokenize=tokenize_en,
 train_data, valid_data, test_data = Multi30k.splits(exts=('.de', '.en'),
                                                     fields=(SRC, TRG))
 
+print(SRC)
+"""
 print(f"Number of training examples: {len(train_data.examples)}")
 print(f"Number of validation examples: {len(valid_data.examples)}")
 print(f"Number of testing examples: {len(test_data.examples)}")
@@ -78,6 +82,8 @@ train_iterator, valid_iterator, test_iterator = BucketIterator.splits(
     device=device)
 
 # hiden をdecoderに渡す
+
+
 class Encoder(nn.Module):
     def __init__(self, input_dim, emb_dim, hid_dim, n_layers, dropout):
         super().__init__()
@@ -346,11 +352,14 @@ for epoch in range(N_EPOCHS):
         torch.save(model.state_dict(), 'tut1-model.pt')
 
     print(f'Epoch: {epoch+1:02} | Time: {epoch_mins}m {epoch_secs}s')
-    print(f'\tTrain Loss: {train_loss:.3f} | Train PPL: {math.exp(train_loss):7.3f}')
-    print(f'\t Val. Loss: {valid_loss:.3f} |  Val. PPL: {math.exp(valid_loss):7.3f}')
+    print(
+        f'\tTrain Loss: {train_loss:.3f} | Train PPL: {math.exp(train_loss):7.3f}')
+    print(
+        f'\t Val. Loss: {valid_loss:.3f} |  Val. PPL: {math.exp(valid_loss):7.3f}')
 
 model.load_state_dict(torch.load('tut1-model.pt'))
 
 test_loss = evaluate(model, test_iterator, criterion)
 
 print(f'| Test Loss: {test_loss:.3f} | Test PPL: {math.exp(test_loss):7.3f} |')
+"""

@@ -1,24 +1,43 @@
 # 学習データで色々やってみるプログラム
 import os
+import spacy
+import torch
+from torchtext import data, datasets
+from torchtext.data import Field
 
-# 空白で区切って単語ごとに分ける
-def split_word(word_list):
-    return word_list.split(' ')
+# 日本語の学習済み統計モデルのロード
+nlp = spacy.load('ja')
+doc = 'spaCyはオープンソースの自然言語処理ライブラリです。学習済みの統計モデルと単語ベクトルが付属しています。'
 
-path = "narrative-response_train.txt"
+# 何してるかよくわかってないけど単語区切りにしてくれるみたい
 
-list1, list2 = [], []
-with open(path, encoding= "utf-8")as f:
-    while True:
-        l = f.readline()
-        if l:
-            # Tabについて分割
-            s = l.split('\t')
-            # 語りと応答について分割
-            list1.append(s[0])
-            # 謎に改行コードが入ったので消しておく
-            list2.append(s[1].rstrip('\n'))
-        else:
-            break
 
-print(split_word(list1[3]))
+def tokenize_ja(text):
+    return [tok.text for tok in nlp.tokenizer(text)]
+
+
+# 学習で使うデータフィードの定義
+TEXT = Field(tokenize=tokenize_ja,
+             init_token='<sos>',
+             eos_token='<eos>',
+             lower=True)
+
+# split_file_with_tab(path)
+print(type(doc))
+print(tokenize_ja(doc))
+print(vars(TEXT))
+
+path1 = 'speak.txt'
+
+# 学習をするテキストに対してデータフィードの適用をする
+lang = datasets.LanguageModelingDataset(path=path1,
+                                        text_field=TEXT)
+
+print(lang)
+
+examples = lang.examples
+print("Number of tokens: ", len(examples[0].text))
+print("\n")
+print("Print first 100 tokens: ", examples[0].text[:100])
+print("\n")
+print("Print last 10 tokens: ", examples[0].text[-10:])

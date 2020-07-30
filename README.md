@@ -128,9 +128,10 @@ Encoder は入力情報をエンコードして Decoder はそれをもとに出
 </details>
 
 <details>
+
 <summary>7/16</summary>
 
-pytorchのサンプルを動かすときのspaCyのモデルは管理者権限でインストールする
+pytorch のサンプルを動かすときの spaCy のモデルは管理者権限でインストールする
 
 発表用のプレゼンを完成させた
 
@@ -139,5 +140,30 @@ pytorchのサンプルを動かすときのspaCyのモデルは管理者権限�
 学習データは、タブ区切りで，左側が語り，右側が傾聴応答．語り，応答とも半角スペースで形態素に区切ってある．
 
 別のファイル（morphological_analysis.py)をつくって前処理の練習をしてる
+
+</details>
+
+<details>
+
+<summary>中間発表振り返り</summary>
+
+質問
+
+1. パフォーマンスはどうやって図るの？
+
+   完全一致率->正解の応答と一致した生成された応答の数
+
+   BLUE->生成された応答と正解がどの程度似ているかの指標
+
+   種類数->生成された応答の種類
+
+2. 系列変換ってどれのこと？
+
+   seq2seq と Transformer の部分のとこで使われている（BERT はどうなんだろ）
+
+</details>
+
+<details>
+<summary>7/30</summary>
 
 </details>
