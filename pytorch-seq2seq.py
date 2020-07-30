@@ -2,8 +2,10 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from torchtext.datasets import Multi30k
+from torchtext import datasets
 from torchtext.data import Field, BucketIterator
+
+from sklearn.model_selection import train_test_split
 
 import spacy
 import numpy as np
@@ -24,6 +26,7 @@ torch.backends.cudnn.deterministic = True
 # python -m spacy download de
 spacy_de = spacy.load('de')
 spacy_en = spacy.load('en')
+spacy_ja = spacy.load('ja')
 
 # ここでは順番をヒックリ返すだけ
 
@@ -41,6 +44,16 @@ def tokenize_en(text):
     """
     return [tok.text for tok in spacy_en.tokenizer(text)]
 
+# 日本語用のトークン化
+
+
+def tokenize_ja(text):
+    return [tok.text for tok in spacy_ja.tokenizer(text)]
+
+
+def reverse_ja(text):
+    return [tok.text for tok in spacy_ja.tokenizer(text)][::-1]
+
 
 # ここで文字列をリストに変換している
 # 生成元の言語（この場合は英語）
@@ -55,17 +68,30 @@ TRG = Field(tokenize=tokenize_en,
             eos_token='<eos>',
             lower=True)
 
-# split data into test and train
-train_data, valid_data, test_data = Multi30k.splits(exts=('.de', '.en'),
-                                                    fields=(SRC, TRG))
+TEXT = Field(tokenize=tokenize_ja,
+             init_token='<sos>',
+             eos_token='<eos>')
 
-print(SRC)
-"""
+TEXT1 = Field(tokenize=reverse_ja,
+              init_token='<sos>',
+              eos_token='<eos>')
+# split data into test and train
+#train_data, valid_data, test_data = Multi30k.splits(exts=('.de', '.en'), fields=(SRC, TRG))
+path1 = 'speak.txt'
+path2 = 'res.txt'
+
+input_data = datasets.LanguageModelingDataset(path1, TEXT)
+output_data = datasets.LanguageModelingDataset(path2, TEXT1)
+
+train_data,  test_data = train_test_split(
+    input_data, output_data, train_size=0.7)
+
+
 print(f"Number of training examples: {len(train_data.examples)}")
 print(f"Number of validation examples: {len(valid_data.examples)}")
 print(f"Number of testing examples: {len(test_data.examples)}")
 print(vars(train_data.examples[0]))
-
+"""
 SRC.build_vocab(train_data, min_freq=2)
 TRG.build_vocab(train_data, min_freq=2)
 
