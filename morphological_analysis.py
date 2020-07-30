@@ -41,3 +41,12 @@ print("\n")
 print("Print first 100 tokens: ", examples[0].text[:100])
 print("\n")
 print("Print last 10 tokens: ", examples[0].text[-10:])
+
+# ヴォキャブラリーの作成
+TEXT.build_vocab(lang)
+vocab = TEXT.vocab
+print("Vocabulary size: ", len(vocab))
+print("10 most frequent words: ", vocab.freqs.most_common(10))
+print("First 10 words: ", vocab.itos[0:10])
+print("First 10 words of text data: ", lang.examples[0].text[:10])
+print("Index of the first word: ", vocab.stoi[lang.examples[0].text[0]])
