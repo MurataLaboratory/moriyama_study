@@ -31,6 +31,8 @@ seq2seq ベースの生成方法の改良
 
 [Attention Is All You Need](https://arxiv.org/abs/1706.03762)
 
+[github of Transformer](https://github.com/huggingface/transformers)
+
 [BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding](https://arxiv.org/abs/1810.04805)
 
 </details>
@@ -165,5 +167,31 @@ pytorch のサンプルを動かすときの spaCy のモデルは管理者権�
 
 <details>
 <summary>7/30</summary>
+
+- やったこと
+
+テキストファイルを seq2seq で読み込ませるための前処理
+
+見た感じうまく行ったので、seq2seq を動かせるようにしたい
+
+ソースコードは morphological_analysis.py にある
+
+呼び掛けと応答を別のファイルに保存してから、前処理をかけるように変更した
+
+訓練用データとテスト用のデータへの分割に sklearn のものを使ってみる
+
+- 参考リンク
+
+[PyTorch で Seq2Seq を実装してみた](https://qiita.com/m__k/items/b18756628575b177b545)
+
+前処理の参考
+
+[Torchtext Tutorial 01: Getting Started](https://github.com/mjc92/TorchTextTutorial/blob/master/01.%20Getting%20started.ipynb)
+
+BERT と Attention の解説記事
+
+[自然言語処理の王様「BERT」の論文を徹底解説](https://qiita.com/omiita/items/72998858efc19a368e50#10-%E8%A6%81%E7%B4%84)
+
+[深層学習界の大前提 Transformer の論文解説！](https://qiita.com/omiita/items/07e69aef6c156d23c538)
 
 </details>
