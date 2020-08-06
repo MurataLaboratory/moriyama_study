@@ -195,3 +195,21 @@ BERT と Attention の解説記事
 [深層学習界の大前提 Transformer の論文解説！](https://qiita.com/omiita/items/07e69aef6c156d23c538)
 
 </details>
+
+<details>
+
+<summary>8/16<summary>
+
+- 今日したこと
+
+  サンプルの seq2seq はめんどくさそうなので自前でモデル部分だけ pytorch を使うように方向転換した
+
+  seq2seq は一応動作するところまではできた。
+
+- これから
+
+  プロポーザルの修正と まとめ WORD を作成する。
+
+  スライドに追加する画像（イラスト）と系列変換の部分の追加
+
+</details>
