@@ -197,8 +197,7 @@ BERT と Attention の解説記事
 </details>
 
 <details>
-
-<summary>8/16<summary>
+<summary>8/16</summary>
 
 - 今日したこと
 
