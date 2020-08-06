@@ -10,7 +10,7 @@ def split_file_with_tab(path):
                 # 語りと応答について分割
                 list1.append(s[0] + '\n')
                 # 謎に改行コードが入ったので消しておく
-                list2.append(s[1])
+                list2.append('_'+s[1])
             else:
                 break
     with open('speak.txt', mode='w', encoding='utf-8') as s:
@@ -21,3 +21,7 @@ def split_file_with_tab(path):
 
 def split_word(word_list):
     return word_list.split(' ')
+
+
+path = 'narrative-response_train.txt'
+split_file_with_tab(path)

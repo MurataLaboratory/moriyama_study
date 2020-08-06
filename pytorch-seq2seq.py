@@ -2,11 +2,13 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
+from torchtext.datasets import Multi30k
 from torchtext import datasets
 from torchtext.data import Field, BucketIterator
 
 from sklearn.model_selection import train_test_split
 
+import torchtext
 import spacy
 import numpy as np
 
@@ -76,24 +78,31 @@ TEXT1 = Field(tokenize=reverse_ja,
               init_token='<sos>',
               eos_token='<eos>')
 # split data into test and train
-#train_data, valid_data, test_data = Multi30k.splits(exts=('.de', '.en'), fields=(SRC, TRG))
+# train_data, valid_data, test_data = Multi30k.splits(
+# exts=('.de', '.en'), fields=(SRC, TRG))
+
+# print(type(train_data))
 path1 = 'speak.txt'
 path2 = 'res.txt'
 
-input_data = datasets.LanguageModelingDataset(path1, TEXT)
-output_data = datasets.LanguageModelingDataset(path2, TEXT1)
+input_data = datasets.LanguageModelingDataset(
+    path1, TEXT)
 
-train_data,  test_data = train_test_split(
-    input_data, output_data, train_size=0.7)
-
-
-print(f"Number of training examples: {len(train_data.examples)}")
-print(f"Number of validation examples: {len(valid_data.examples)}")
-print(f"Number of testing examples: {len(test_data.examples)}")
-print(vars(train_data.examples[0]))
+output_data = datasets.LanguageModelingDataset(
+    path2, TEXT1)
+#train_data, valid_data, test_data = torchtext.data.TabularDataset.splits( input_data, output_data)
+#train_data, valid_data, test_data = input_data.splits()
+#print(f"Number of training examples: {len(train_data.examples)}")
+#print(f"Number of validation examples: {len(valid_data.examples)}")
+#print(f"Number of testing examples: {len(test_data.examples)}")
+# print(vars(train_data.examples[0]))
+TEXT.build_vocab(input_data)
+input_data = TEXT.vocab
+print(len(input_data))
+print("10 most frequent words: ", input_data.freqs.most_common(10))
 """
-SRC.build_vocab(train_data, min_freq=2)
-TRG.build_vocab(train_data, min_freq=2)
+TEXT.build_vocab(train_data, min_freq=2)
+TEXT1.build_vocab(train_data, min_freq=2)
 
 print(f"Unique tokens in source (de) vocabulary: {len(SRC.vocab)}")
 print(f"Unique tokens in target (en) vocabulary: {len(TRG.vocab)}")
