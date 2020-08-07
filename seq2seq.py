@@ -102,7 +102,7 @@ class Encoder(nn.Module):
         super(Encoder, self).__init__()
         self.hidden_dim = hidden_dim
         self.word_embeddings = nn.Embedding(
-            vocab_size, embedding_dim, padding_idx=char2id[" "])
+            vocab_size, embedding_dim, padding_idx=0)
         self.lstm = nn.LSTM(embedding_dim, hidden_dim, batch_first=True)
 
     def forward(self, sequence):
@@ -116,7 +116,7 @@ class Decoder(nn.Module):
         super(Decoder, self).__init__()
         self.hidden_dim = hidden_dim
         self.word_embeddings = nn.Embedding(
-            vocab_size, embedding_dim, padding_idx=char2id[" "])
+            vocab_size, embedding_dim, padding_idx=0)
         self.lstm = nn.LSTM(embedding_dim, hidden_dim, batch_first=True)
         self.hidden2linear = nn.Linear(hidden_dim, vocab_size)
 
@@ -176,3 +176,8 @@ for epoch in range(1, EPOCH_NUM+1):
     if epoch_loss < 1:
         break
 print("Done")
+
+path = __file__
+
+torch.save(encoder.state_dict(), path)
+torch.save(decoder.state_dict(), path)
