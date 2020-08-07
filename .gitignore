@@ -3,7 +3,6 @@ fra-eng/_about.txt
 fra-eng/fra.txt
 .data
 s2s.h5
-tut1-model.pt
 data
 deep-learning-from-scrach-2
 DL_from_scrach/dataset
@@ -12,6 +11,7 @@ DL_from_scrach/dataset
 ptb.*
 *.pkl
 *.xml
+*.pt
 .idea
 /deep-learning-from-scratch-2/dataset/ptb.train.npy
 /deep-learning-from-scratch-2/dataset/ptb.train.txt

@@ -189,7 +189,7 @@ Seq2seq = Seq2seq(encoder, decoder, device).to(device)
 Seq2seq.forward(train_x, train_y)
 
 print("Done")
-path = os.getcwd() + "seq2seq.pt"
+path = "seq2seq.pt"
 print(path)
 
 torch.save(Seq2seq.state_dict(), path)
