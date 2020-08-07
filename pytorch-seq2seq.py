@@ -100,7 +100,6 @@ TEXT.build_vocab(input_data)
 input_data = TEXT.vocab
 print(len(input_data))
 print("10 most frequent words: ", input_data.freqs.most_common(10))
-"""
 TEXT.build_vocab(train_data, min_freq=2)
 TEXT1.build_vocab(train_data, min_freq=2)
 
@@ -397,4 +396,3 @@ model.load_state_dict(torch.load('tut1-model.pt'))
 test_loss = evaluate(model, test_iterator, criterion)
 
 print(f'| Test Loss: {test_loss:.3f} | Test PPL: {math.exp(test_loss):7.3f} |')
-"""
