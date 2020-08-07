@@ -1,3 +1,4 @@
+import os
 import torch.optim as optim
 import torch.nn as nn
 import torch
@@ -127,57 +128,70 @@ class Decoder(nn.Module):
         return output, state
 
 
+class Seq2seq(nn.Module):
+    def __init__(self, encoder, decoder, device):
+        super(Seq2seq, self).__init__()
+        self.encoder = encoder
+        self.decoder = decoder
+        self.device = device
+
+    def forward(self, train_x, train_y):
+        # 損失関数
+        criterion = nn.CrossEntropyLoss()
+
+        # 最適化
+        encoder_optimizer = optim.Adam(encoder.parameters(), lr=0.001)
+        decoder_optimizer = optim.Adam(decoder.parameters(), lr=0.001)
+
+        all_losses = []
+        print('training...')
+        for epoch in range(1, EPOCH_NUM+1):
+            epoch_loss = 0
+            input_batch, output_batch = train2batch(
+                train_x, train_y, batch_size=BATCH_NUM)
+
+            for i in range(len(input_batch)):
+                # 勾配の初期化
+                encoder_optimizer.zero_grad()
+                decoder_optimizer.zero_grad()
+                # データを行列に変換
+                input_tensor = torch.tensor(input_batch[i], device=device)
+                output_tensor = torch.tensor(output_batch[i], device=device)
+                # encoderの順天板の学習
+                encoder_state = self.encoder(input_tensor)
+                # decoderの入力データ
+                source = output_tensor[:, :-1]
+                # decoderの教師データ
+                target = output_tensor[:, 1:]
+                loss = 0
+                decoder_output, _ = self.decoder(source, encoder_state)
+
+                for j in range(decoder_output.size()[1]):
+                    loss += criterion(decoder_output[:, j, :], target[:, j])
+
+                epoch_loss += loss.item()
+
+                loss.backward()
+                encoder_optimizer.step()
+                decoder_optimizer.step()
+
+            # 損失を表示
+            print("Epoch %d: %.2f" % (epoch, epoch_loss))
+            all_losses.append(epoch_loss)
+            if epoch_loss < 1:
+                break
+
+
 # GPU使えるように。
 encoder = Encoder(vocab_size, embedding_dim, hidden_dim).to(device)
 decoder = Decoder(vocab_size, embedding_dim, hidden_dim).to(device)
+Seq2seq = Seq2seq(encoder, decoder, device).to(device)
+Seq2seq.forward(train_x, train_y)
 
-# 損失関数
-criterion = nn.CrossEntropyLoss()
-
-# 最適化
-encoder_optimizer = optim.Adam(encoder.parameters(), lr=0.001)
-decoder_optimizer = optim.Adam(decoder.parameters(), lr=0.001)
-
-all_losses = []
-print('training...')
-for epoch in range(1, EPOCH_NUM+1):
-    epoch_loss = 0
-    input_batch, output_batch = train2batch(
-        train_x, train_y, batch_size=BATCH_NUM)
-
-    for i in range(len(input_batch)):
-        # 勾配の初期化
-        encoder_optimizer.zero_grad()
-        decoder_optimizer.zero_grad()
-        # データを行列に変換
-        input_tensor = torch.tensor(input_batch[i], device=device)
-        output_tensor = torch.tensor(output_batch[i], device=device)
-        # encoderの順天板の学習
-        encoder_state = encoder(input_tensor)
-        # decoderの入力データ
-        source = output_tensor[:, :-1]
-        # decoderの教師データ
-        target = output_tensor[:, 1:]
-        loss = 0
-        decoder_output, _ = decoder(source, encoder_state)
-
-        for j in range(decoder_output.size()[1]):
-            loss += criterion(decoder_output[:, j, :], target[:, j])
-
-        epoch_loss += loss.item()
-
-        loss.backward()
-        encoder_optimizer.step()
-        decoder_optimizer.step()
-
-    # 損失を表示
-    print("Epoch %d: %.2f" % (epoch, epoch_loss))
-    all_losses.append(epoch_loss)
-    if epoch_loss < 1:
-        break
 print("Done")
+path = os.getcwd() + "seq2seq.pt"
+print(path)
 
-path = __file__
-
-torch.save(encoder.state_dict(), path)
-torch.save(decoder.state_dict(), path)
+torch.save(Seq2seq.state_dict(), path)
+# torch.save(encoder.state_dict(), path)
+# torch.save(decoder.state_dict(), path)
