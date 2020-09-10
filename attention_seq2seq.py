@@ -6,7 +6,7 @@ import torch
 import random
 from sklearn.utils import shuffle
 
-imput_path = 'speak.txt'
+input_path = 'speak.txt'
 output_path = 'res.txt'
 
 input_data, output_data = [], []
@@ -114,18 +114,18 @@ class Encoder(nn.Module):
         return hs, h
 
 
-class Decoder(nn.Module):
+class AttentionDecoder(nn.Module):
     def __init__(self, vocab_size, embedding_dim, hidden_dim, batch_size):
         super(AttentionDecoder, self).__init__()
         self.hidden_dim = hidden_dim
         self.batch_size = batch_size
         self.word_embeddings = nn.Embedding(
             vocab_size, embedding_dim, padding_idx=0)
-        self.gru = nn.GRU(embedding_dim, hidden_dim. batch_first=True)
+        self.gru = nn.GRU(embedding_dim, hidden_dim, batch_first=True)
         self.hidden2linear = nn.Linear(hidden_dim * 2, vocab_size)
         self.softmax = nn.Softmax(dim=1)
 
-    def forward(self, sequence):
+    def forward(self, sequence, hs,):
         embedding = self.word_embeddings(sequence)
         output, state = self.gru(embedding, h)
 
@@ -134,7 +134,7 @@ class Decoder(nn.Module):
         s = torch.bmm(hs, t_output)
         attention_weight = self.softmax(s)
 
-        c = torch.zeros(self.batch_size, , self.hidden_dim, device=device)
+        c = torch.zeros(self.batch_size, self.hidden_dim, device=device)
 
         for i in range(attention_weight.size()[2]):
 
@@ -154,10 +154,10 @@ class Decoder(nn.Module):
 
 
 encoder = Encoder(vocab_size, embedding_dim, hidden_dim).to(device)
-attention_decoder = attention_decoder(
+attention_decoder = AttentionDecoder(
     vocab_size, embedding_dim, hidden_dim, BATCH_NUM).to(device)
 
-criterion = nn.CrossEmtoropyLoss()
+criterion = nn.CrossEntropyLoss()
 
 encoder_optimizer = optim.Adam(encoder.parameters(), lr=0.001)
 attention_decoder_optimizer = optim.Adam(

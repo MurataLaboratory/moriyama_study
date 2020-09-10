@@ -194,5 +194,3 @@ path = "seq2seq.pt"
 print(path)
 
 torch.save(Seq2seq.state_dict(), path)
-# torch.save(encoder.state_dict(), path)
-# torch.save(decoder.state_dict(), path)

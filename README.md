@@ -212,3 +212,24 @@ BERT と Attention の解説記事
   スライドに追加する画像（イラスト）と系列変換の部分の追加
 
 </details>
+
+<details>
+<summary>9/10</summary>
+
+- 今日したこと
+
+  Attention を使った seq2seq を実装（丸写し）した
+
+  Attention はまだデバックしていないです
+
+- これからの予定
+
+モデルを読み込んで、応答の生成をするスクリプトを作成する
+
+BLUE などのスコアの計算もしていきたい
+
+- 参考文献
+
+[PyTorch で Attention Seq2Seq を実装してみた](https://qiita.com/m__k/items/646044788c5f94eadc8d)
+
+</details>
