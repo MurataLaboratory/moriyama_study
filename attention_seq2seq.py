@@ -12,10 +12,10 @@ output_path = 'res.txt'
 input_data, output_data = [], []
 
 with open(input_path, "r", encoding='utf-8') as f:
-    input_data = f.readline()
+    input_data = f.readlines()
 
 with open(output_path, "r", encoding='utf-8') as f:
-    output_data = f.readline()
+    output_data = f.readlines()
 
 input_len = len(input_data)
 output_len = len(output_data)
@@ -125,16 +125,16 @@ class AttentionDecoder(nn.Module):
         self.hidden2linear = nn.Linear(hidden_dim * 2, vocab_size)
         self.softmax = nn.Softmax(dim=1)
 
-    def forward(self, sequence, hs,):
+    def forward(self, sequence, hs, h):
         embedding = self.word_embeddings(sequence)
         output, state = self.gru(embedding, h)
 
-        t_output = torch.trainspose(output, 1, 2)
+        t_output = torch.transpose(output, 1, 2)
 
         s = torch.bmm(hs, t_output)
         attention_weight = self.softmax(s)
 
-        c = torch.zeros(self.batch_size, self.hidden_dim, device=device)
+        c = torch.zeros(self.batch_size, 1, self.hidden_dim, device=device)
 
         for i in range(attention_weight.size()[2]):
 
@@ -142,7 +142,7 @@ class AttentionDecoder(nn.Module):
 
             weighted_hs = hs * unsq_weight
 
-            weight_sum = torch.sum(weighted_hs, axis=1).unsqeeze(1)
+            weight_sum = torch.sum(weighted_hs, axis=1).unsqueeze(1)
 
             c = torch.cat([c, weight_sum], dim=1)
         c = c[:, 1:, :]

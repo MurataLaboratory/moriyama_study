@@ -1,0 +1,100 @@
+asn1crypto @ file:///C:/ci/asn1crypto_1594339244757/work
+attrs==19.3.0
+autopep8 @ file:///tmp/build/80754af9/autopep8_1592412889138/work
+backcall==0.2.0
+bleach==3.1.5
+blis @ file:///C:/ci/cython-blis_1594248830923/work
+brotlipy==0.7.0
+catalogue==1.0.0
+certifi==2020.6.20
+cffi==1.14.0
+chardet==3.0.4
+click==7.1.2
+colorama==0.4.3
+cryptography==2.3.1
+cymem==2.0.3
+Cython==0.29.21
+dartsclone==0.9.0
+de-core-news-sm @ https://github.com/explosion/spacy-models/releases/download/de_core_news_sm-2.3.0/de_core_news_sm-2.3.0.tar.gz
+decorator==4.4.2
+defusedxml==0.6.0
+en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-2.3.1/en_core_web_sm-2.3.1.tar.gz
+entrypoints==0.3
+future==0.18.2
+ginza @ https://github.com/megagonlabs/ginza/releases/download/latest/ginza-latest.tar.gz
+idna @ file:///tmp/build/80754af9/idna_1593446292537/work
+importlib-metadata @ file:///C:/ci/importlib-metadata_1593446525189/work
+ipykernel @ file:///C:/ci/ipykernel_1594829155762/work/dist/ipykernel-5.3.2-py3-none-any.whl
+ipython @ file:///C:/ci/ipython_1593433781269/work
+ipython-genutils==0.2.0
+ja-core-news-md @ https://github.com/explosion/spacy-models/releases/download/ja_core_news_md-2.3.2/ja_core_news_md-2.3.2.tar.gz
+ja-ginza==3.1.0
+ja-ginza-dict==3.1.0
+jedi @ file:///C:/ci/jedi_1592833832328/work
+Jinja2==2.11.2
+joblib @ file:///tmp/build/80754af9/joblib_1594236160679/work
+jsonschema==3.0.2
+jupyter-client @ file:///tmp/build/80754af9/jupyter_client_1594826976318/work
+jupyter-core==4.6.3
+MarkupSafe @ file:///C:/ci/markupsafe_1594405949945/work
+mistune @ file:///C:/ci/mistune_1594373272338/work
+mkl-fft==1.1.0
+mkl-random==1.1.1
+mkl-service==2.3.0
+murmurhash==1.0.2
+nbconvert @ file:///C:/ci/nbconvert_1594372737468/work
+nbformat==5.0.7
+nltk==3.5
+notebook==6.0.3
+numpy==1.18.5
+packaging==20.4
+pandocfilters==1.4.2
+parso==0.7.0
+pickleshare @ file:///C:/ci/pickleshare_1594374056827/work
+Pillow==7.2.0
+plac @ file:///C:/ci/plac_1594257364512/work
+preshed==3.0.2
+prometheus-client==0.8.0
+prompt-toolkit==3.0.5
+pycodestyle==2.6.0
+pycparser @ file:///tmp/build/80754af9/pycparser_1594388511720/work
+Pygments==2.6.1
+pyOpenSSL==19.0.0
+pyparsing==2.4.7
+pyrsistent==0.16.0
+PySocks @ file:///C:/ci/pysocks_1594394709107/work
+python-dateutil==2.8.1
+pywin32==227
+pywinpty==0.5.7
+pyzmq==19.0.1
+regex==2020.7.14
+requests @ file:///tmp/build/80754af9/requests_1592841827918/work
+scikit-learn @ file:///C:/ci/scikit-learn_1592847564598/work
+scipy==1.5.2
+Send2Trash==1.5.0
+sentencepiece==0.1.91
+six==1.15.0
+sklearn==0.0
+sortedcontainers==2.1.0
+spacy==2.3.2
+srsly==1.0.2
+SudachiDict-core==20200330
+SudachiPy==0.4.9
+terminado==0.8.3
+testpath==0.4.4
+thinc==7.4.1
+threadpoolctl @ file:///tmp/tmp9twdgx9k/threadpoolctl-2.1.0-py3-none-any.whl
+toml @ file:///tmp/build/80754af9/toml_1592853716807/work
+torch==1.5.1
+torchtext==0.6.0
+torchvision==0.6.1
+tornado==6.0.4
+tqdm @ file:///tmp/build/80754af9/tqdm_1593446365756/work
+traitlets==4.3.3
+urllib3==1.25.9
+wasabi==0.6.0
+wcwidth @ file:///tmp/build/80754af9/wcwidth_1593447189090/work
+webencodings==0.5.1
+win-inet-pton==1.1.0
+wincertstore==0.2
+zipp==3.1.0
