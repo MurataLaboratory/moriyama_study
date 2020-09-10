@@ -151,3 +151,55 @@ class Decoder(nn.Module):
         output = self.hidden2linear(output)
 
         return output, state, attention_weight
+
+
+encoder = Encoder(vocab_size, embedding_dim, hidden_dim).to(device)
+attention_decoder = attention_decoder(
+    vocab_size, embedding_dim, hidden_dim, BATCH_NUM).to(device)
+
+criterion = nn.CrossEmtoropyLoss()
+
+encoder_optimizer = optim.Adam(encoder.parameters(), lr=0.001)
+attention_decoder_optimizer = optim.Adam(
+    attention_decoder.parameters(), lr=0.001)
+
+
+all_losses = []
+
+print("training...")
+
+for epoch in range(1, EPOCH_NUM+1):
+    epoch_loss = 0
+    input_batch, output_batch = train2batch(
+        train_x, train_y, batch_size=BATCH_NUM)
+    for i in range(len(input_batch)):
+        encoder_optimizer.zero_grad()
+        attention_decoder_optimizer.zero_grad()
+
+        input_tensor = torch.tensor(input_batch[i], device=device)
+        output_tensor = torch.tensor(output_batch[i], device=device)
+
+        hs, h = encoder(input_tensor)
+
+        source = output_tensor[:, :-1]
+        target = output_tensor[:, 1:]
+
+        loss = 0
+        decoder_output, _, attention_weight = attention_decoder(source, hs, h)
+
+        for j in range(decoder_output.size()[1]):
+            loss += criterion(decoder_output[:, j, :], target[:, j])
+
+        epoch_loss += loss.item()
+
+        loss.backward()
+
+        encoder_optimizer.step()
+        attention_decoder_optimizer.step()
+
+    print("EPOCH %d: %.2f" % (epoch, epoch_loss))
+    all_losses.append(epoch_loss)
+    if epoch_loss < 0.1:
+        break
+
+prin("Done")
