@@ -50,6 +50,7 @@ max_out_len = 0
 for input_d, out_d in zip(input_id_data, output_id_data):
     index_datasets_in_tmp.append(input_d)
     index_datasets_out_tmp.append(out_d)
+    # 長さの最大値の計算
     if max_in_len < len(input_d):
         max_in_len = len(input_d)
     if max_out_len < len(out_d):
