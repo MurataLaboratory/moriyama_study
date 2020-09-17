@@ -194,3 +194,46 @@ path = "seq2seq.pt"
 print(path)
 
 torch.save(Seq2seq.state_dict(), path)
+
+"""
+ここから生成のコードです
+"""
+
+
+def get_max_index(decoder_output):
+    results = []
+    for h in decoder_output:
+        results.append(torch.argmax(h))
+    return torch.tensor(results, device=device).view(BATCH_NUM, 1)
+
+
+# 評価用のデータ
+
+test_input_batch, test_output_batch = train2batch(test_x, test_y)
+input_tensor = torch.tensor(test_input_batch, device=device)
+
+predicts = []
+
+for i in range(len(test_input_batch)):
+    with torch.no_grad():
+        encoder_state = encoder(input_tensor[i])
+
+        # _が生成開始文字列なので、バッチサイズの分だけ作成する
+        start_char_batch = [[char2id["_"]] for _ in range(BATCH_NUM)]
+        decoder_input_tensor = torch.tensor(start_char_batch, device=device)
+
+        decoder_hidden = encoder_state
+
+        batch_tmp = torch.zeros(100, 1, dtype=torch.long, device=device)
+
+        for _ in range(5):
+            decoder_output, decoder_hiddne = decoder(
+                decoder_input_tensor, decoder_hidden)
+
+            decoder_input_tensor = get_max_index(decoder_output.squeeze())
+
+            batch_tmp = torch.cat([batch_tmp, decoder_input_tensor], dim=1)
+
+        predicts.append(batch_tmp[:, 1:])
+
+print(len(predicts))

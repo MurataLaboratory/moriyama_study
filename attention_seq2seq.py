@@ -144,8 +144,8 @@ class AttentionDecoder(nn.Module):
 
             weight_sum = torch.sum(weighted_hs, axis=1).unsqueeze(1)
 
-            print(c.size())
-            print(weight_sum.size())
+            # print(c.size())
+            # print(weight_sum.size())
             # cとweighted_sumの次元が違うのでエラーになる
             c = torch.cat([c, weight_sum], dim=1)
         c = c[:, 1:, :]
