@@ -233,3 +233,26 @@ BLUE などのスコアの計算もしていきたい
 [PyTorch で Attention Seq2Seq を実装してみた](https://qiita.com/m__k/items/646044788c5f94eadc8d)
 
 </details>
+
+<details>
+<summary>9/17</summary>
+
+- 今日したこと
+
+コードを colabolatory に移植した。
+
+seq2seq の場合の生成が一応できた
+
+[結果はこちらです](https://drive.google.com/drive/folders/1wlw_0E57uI_qXNbg4HnL0xcrFFQjyb_S)
+
+ファイル名は seq2seq.csv
+
+- これからすること
+
+スコアの計測
+
+正しく生成できているかわからないので確認する
+
+Attention 　 seq2seq も実行して生成してみる
+
+</details>
