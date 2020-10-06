@@ -256,3 +256,22 @@ seq2seq の場合の生成が一応できた
 Attention 　 seq2seq も実行して生成してみる
 
 </details>
+
+<details>
+<summary>10/6</summary>
+
+- 今日したこと
+
+seq2seq の処理の確認
+
+torchtext を使ってテキストデータの処理をした
+
+参考: [torchtext で簡単に Deep な自然言語処理](https://qiita.com/itok_msi/items/1f3746f7e89a19dafac5)
+
+- これからすること
+
+いったん seq2seq の問題点を確認した後に、transformer のモデルを作成したい
+
+ちゃんと生成されているか確認する
+
+</details>
