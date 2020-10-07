@@ -275,3 +275,9 @@ torchtext を使ってテキストデータの処理をした
 ちゃんと生成されているか確認する
 
 </details>
+
+<details>
+
+<summary>10/07</summar>
+
+</details>
