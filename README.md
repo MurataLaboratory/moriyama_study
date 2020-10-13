@@ -278,7 +278,7 @@ torchtext を使ってテキストデータの処理をした
 
 <details>
 
-<summary>10/07</summar>
+<summary>10/07</summary>
 
 - 今日したこと
 
