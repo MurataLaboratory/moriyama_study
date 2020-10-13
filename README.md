@@ -326,6 +326,12 @@ attention seq2seq の学習の実行（デバッグ）
 
   Attention Seq2seqの学習が動作した。
 
+  pytorchでBERTを使うときの参考になりそうな記事を探していた。
+
+  (日本語BERTモデルをPyTorch用に変換してfine-tuningする with torchtext & pytorch-lightning)[https://radiology-nlp.hatenablog.com/entry/2020/01/18/013039]
+
+  (Pretrained models -Hugging face)[https://huggingface.co/transformers/pretrained_models.html]
+
 - これからすること
 
   Attention Seq2seqを使って文章を生成して、結果を確認する。
