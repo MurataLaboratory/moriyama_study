@@ -328,13 +328,13 @@ attention seq2seq の学習の実行（デバッグ）
 
   pytorchでBERTを使うときの参考になりそうな記事を探していた。
 
-  (日本語BERTモデルをPyTorch用に変換してfine-tuningする with torchtext & pytorch-lightning)[https://radiology-nlp.hatenablog.com/entry/2020/01/18/013039]
+  [日本語BERTモデルをPyTorch用に変換してfine-tuningする with torchtext & pytorch-lightning](https://radiology-nlp.hatenablog.com/entry/2020/01/18/013039)
 
-  (Pretrained models -Hugging face)[https://huggingface.co/transformers/pretrained_models.html]
+  [Pretrained models -Hugging face](https://huggingface.co/transformers/pretrained_models.html)
 
-  (cl-tohoku/bert-japanese)[https://github.com/cl-tohoku/bert-japanese]
+  [cl-tohoku/bert-japanese](https://github.com/cl-tohoku/bert-japanese)
 
-  (日本語BERTモデルに、センター試験や文章生成をやらせてみる)[https://qiita.com/jun40vn/items/6458eb3a5301602d7092]
+  [日本語BERTモデルに、センター試験や文章生成をやらせてみる](https://qiita.com/jun40vn/items/6458eb3a5301602d7092)
 
 - これからすること
 
