@@ -332,6 +332,10 @@ attention seq2seq の学習の実行（デバッグ）
 
   (Pretrained models -Hugging face)[https://huggingface.co/transformers/pretrained_models.html]
 
+  (cl-tohoku/bert-japanese)[https://github.com/cl-tohoku/bert-japanese]
+
+  (日本語BERTモデルに、センター試験や文章生成をやらせてみる)[https://qiita.com/jun40vn/items/6458eb3a5301602d7092]
+
 - これからすること
 
   Attention Seq2seqを使って文章を生成して、結果を確認する。
