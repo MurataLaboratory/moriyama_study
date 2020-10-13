@@ -318,3 +318,18 @@ torchtext を使って、文章の前処理をした。
 attention seq2seq の学習の実行（デバッグ）
 
 </details>
+
+<details>
+<summary>10/13</summary>
+
+- 今日したこと
+
+  Attention Seq2seqの学習が動作した。
+
+- これからすること
+
+  Attention Seq2seqを使って文章を生成して、結果を確認する。
+
+  pytorchを使ってBERTのfine Turningのやり方を知らべる
+
+</details>
