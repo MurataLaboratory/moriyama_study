@@ -343,3 +343,37 @@ attention seq2seq の学習の実行（デバッグ）
   pytorchを使ってBERTのfine Turningのやり方を知らべる
 
 </details>
+
+<details>
+<summary>10/14</summary>
+
+- 今日したこと
+
+Transformerでの文章生成部分の作成。生成は正しくできてそう。]
+
+一通り生成できたと思います
+
+- これからすること
+
+生成結果を使って、スコアを計算するスクリプトを書く
+
+</details>
+
+<details>
+<summary>10/13</summary>
+
+- 今日したこと
+
+Attention Seq2seqの学習と文章生成。結果は`result_transformer.csv`にあります。
+
+各スコアを計算するためのスクリプトの作成
+
+bleuのスコアがどうしても0に近い値になってしまう。結果は`score_seq2seq.csv`にあります。
+
+- これからすること
+
+BERTを使って文章を生成する。
+
+BLEUのスコアについて考察する
+
+</details>
