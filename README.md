@@ -399,9 +399,8 @@ BERTのモデルの作成
 
 生成に関する論文
 
-(BERT has a Mouth, and It Must Speak: BERT as a Markov Random Field Language Model)[https://arxiv.org/abs/1902.04094]
+[BERT has a Mouth, and It Must Speak: BERT as a Markov Random Field Language Model](https://arxiv.org/abs/1902.04094)
 
-(BERT has a Mouth, and It Must Speak: BERT as a Markov Random Field Language Model)[https://arxiv.org/abs/1902.04094]
 
 - これからすること
 
