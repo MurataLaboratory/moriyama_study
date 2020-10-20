@@ -361,7 +361,7 @@ attention seq2seq の学習の実行（デバッグ）
 
 - 今日したこと
 
-Transformerでの文章生成部分の作成。生成は正しくできてそう。]
+Transformerでの文章生成部分の作成。生成は正しくできてそう。
 
 一通り生成できたと思います
 
@@ -387,5 +387,26 @@ bleuのスコアがどうしても0に近い値になってしまう。結果は
 BERTを使って文章を生成する。
 
 BLEUのスコアについて考察する
+
+</details>
+
+<details>
+<summary>10/20</summary>
+
+- 今日したこと
+
+BERTのモデルの作成
+
+生成に関する論文
+
+(BERT has a Mouth, and It Must Speak: BERT as a Markov Random Field Language Model)[https://arxiv.org/abs/1902.04094]
+
+(BERT has a Mouth, and It Must Speak: BERT as a Markov Random Field Language Model)[https://arxiv.org/abs/1902.04094]
+
+- これからすること
+
+参考にしているものがテキストの分類タスク用なので文章生成をするように変更する
+
+引き続きBERTモデルの作成を続ける
 
 </details>
