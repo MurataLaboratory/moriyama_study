@@ -426,3 +426,20 @@ BERTモデルの作成をした。
 BERTの重みを使ってseq2seqを初期化して学習させる。
 
 </details>
+
+<details>
+<summary>10/22</summary>
+
+- 今日したこと
+
+ハイパーパラメータをseq2seqとtransformerでそろえた。
+
+BERTの重みを取り出すことができた。
+
+- これからすること
+
+未知語の処理を考える。
+
+BERTの重みでEmbeddingの初期化をする方法を考える。
+
+</details>
