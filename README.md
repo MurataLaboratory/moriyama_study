@@ -473,3 +473,22 @@ BERTから分散表現を取り出す。
 中間発表のスライドの作成。
 
 </details>
+
+<details>
+<summary>10/29</summary>
+
+- 今日したこと
+
+Transformerを使って学習を実行できた。
+
+生成文を変換する関数を見直した。辞書には問題はなさそうなので、吐き出す確率の番号がおかしいと感じた。
+
+入力文や応答に対する翻訳があってない（おかしい）。
+
+seq2seqのプログラムは`seq2seq_with_torchtext.ipynb`、Attention付きseq2seqのプログラムは`attention=seq2seq.ipynb`にあります。
+
+- これからすること
+
+中間発表のスライドの作成
+
+</details>
