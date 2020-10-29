@@ -487,6 +487,60 @@ Transformerを使って学習を実行できた。
 
 seq2seqのプログラムは`seq2seq_with_torchtext.ipynb`、Attention付きseq2seqのプログラムは`attention=seq2seq.ipynb`にあります。
 
+
+pytorch のチュートリアルの学習データ（ドイツ語ー＞英語の翻訳タスク）で10エポック学習させて、生成を試した結果
+
+プログラム
+
+```a.py
+output = model(src, trg)
+pred, src_str, trg_str = [], [], []
+_, output = output.data.topk(1)
+for k in range(output.size()[1]):
+  pred.append([TRG.vocab.itos[output[1:, k][i]] for i in range(output.size()[0] - 1) if TRG.vocab.itos[output[1:, k][i]] != "<eos>"])
+for j in range(2):
+  src_str.append([SRC.vocab.itos[i.item()] for i in src[:,j] if SRC.vocab.itos[i.item()] != "<pad>"])
+  trg_str.append([TRG.vocab.itos[i.item()] for i in trg[:,j] if TRG.vocab.itos[i.item()] != "<pad>"])
+  print("入力")
+  print(src[:, j])
+  print(src_str[j])
+  print("答え")
+  print(trg[:, j])
+  print(trg_str[j])
+  print("予測")
+  print(output[:,j])
+  print(pred[j])
+```
+
+実行結果
+
+```
+入力
+tensor([  2,  14,  11,  15,   4, 349,   4, 334,  37, 119,  13,   9,  53,   4,
+         34,  22,   3,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,
+          1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,
+          1,   1,   1,   1,   1,   1,   1,   1])
+['<sos>', 'einer', 'mit', 'der', '.', 'rote', '.', 'ihn', 'hält', 'hoch', 'mann', ',', 'sitzen', '.', 'straße', 'von', '<eos>']
+答え
+tensor([ 2,  9,  7, 20,  3,  1,  1,  1,  1,  1])
+['<sos>', 'man', 'the', 'at', '<eos>']
+予測
+tensor([[0],[8],[3],[3],[3],[3],[3],[3],[3],[3]])
+['on']
+入力
+tensor([  2,  17, 459, 395,  10,  18, 459, 395,  48, 451, 885,   4,   3,   1,
+          1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,
+          1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,
+          1,   1,   1,   1,   1,   1,   1,   1])
+['<sos>', 'die', 'versuchen', 'mannes', 'und', 'zwei', 'versuchen', 'mannes', 'ist', 'rock', 'aussehender', '.', '<eos>']
+答え
+tensor([  2,  16,  16, 423, 521,   3,   1,   1,   1,   1])
+['<sos>', 'two', 'two', 'instruments', 'students', '<eos>']
+予測
+tensor([[  0],[139],[ 16],[ 16],[ 16],[  3],[  3],[  3],[  3],[  3]])
+['hand', 'two', 'two', 'two']
+```
+
 - これからすること
 
 中間発表のスライドの作成
