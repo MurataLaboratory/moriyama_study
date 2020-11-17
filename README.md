@@ -552,3 +552,18 @@ pytorchのテンプレートでは、言語モデルを作っていた。これ�
 一旦、bertの分散表現を使ったseq2seqを作ります
 
 </details>
+
+<details>
+<summary>11/17</summary>
+
+- 今日したこと
+
+bertを埋め込みを使ったseq2seqとTransformerの作成
+
+プログラムの見直し
+
+- これからすること
+
+Transformer側のDecoder部分の追加実装
+
+</details>
