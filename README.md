@@ -567,3 +567,16 @@ bertを埋め込みを使ったseq2seqとTransformerの作成
 Transformer側のDecoder部分の追加実装
 
 </details>
+
+<details>
+<summary>11/18</summary>
+
+- 今日したこと
+
+TransformerとBERTの分散表現を使ったTransformerの学習の実行
+
+- これからすること
+
+生成された文章の確認とスコアの計測
+
+</details>
