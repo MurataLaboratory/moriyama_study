@@ -15,3 +15,5 @@ ptb.*
 /deep-learning-from-scratch-2/dataset/ptb.train.txt
 /deep-learning-from-scratch-2/dataset/ptb.vocab.pkl
 /model/*.pt
+
+data
