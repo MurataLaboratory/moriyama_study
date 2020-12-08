@@ -1,7 +1,9 @@
 .vscode/settings.json
 fra-eng/_about.txt
 fra-eng/fra.txt
+.data
 s2s.h5
+data
 deep-learning-from-scrach-2
 DL_from_scrach/dataset
 *.pyc
