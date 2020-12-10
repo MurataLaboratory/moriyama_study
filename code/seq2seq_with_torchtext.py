@@ -7,15 +7,6 @@
 print('hello world')
 
 
-# In[2]:
-
-
-get_ipython().system('pip install torchtext==0.6.0')
-
-
-# In[3]:
-
-
 # 必要なモジュールのインポート
 import torch
 import torch.nn as nn
@@ -30,10 +21,6 @@ import math
 import time
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-
-# In[4]:
-
-
 SEED = 1234
 
 random.seed(SEED)
@@ -41,15 +28,6 @@ np.random.seed(SEED)
 torch.manual_seed(SEED)
 torch.cuda.manual_seed(SEED)
 torch.backends.cudnn.deterministic = True
-
-
-# In[5]:
-
-
-get_ipython().system('pip install janome')
-
-
-# In[6]:
 
 
 import janome
@@ -60,36 +38,14 @@ j_t = Tokenizer()
 def tokenizer(text):
   return [tok for tok in j_t.tokenize(text, wakati=True)]
 
-
-# In[7]:
-
-
-tokenizer("今日は曇りです")
-
-
-# In[8]:
-
-
 import torchtext
 import torch
 from torchtext import data
 from torchtext import datasets
 
-
-# In[9]:
-
-
-# pytorchのデータフィードの定義（重要！！）
-SRC = data.Field(sequential=True, tokenize = tokenizer, init_token='<sos>', eos_token='<eos>', lower=True)
-TRG = data.Field(sequential=True, tokenize = tokenizer, init_token='<sos>', eos_token='<eos>', lower=True)
-
-
-# In[12]:
-
-
 # 重複のないデータセットか重複のあるデータセットを選ぶ
 # flagがTrueの時重複のないデータを返す
-def choose_dataset(flag = False):
+def choose_dataset(flag = False, SRC, TRG):
   if flag:
     train, val, test = data.TabularDataset.splits(
         path="../data/", train='one_train.tsv',
@@ -104,34 +60,6 @@ def choose_dataset(flag = False):
     filename = "../csv/result_Seq2seq.csv"
   
   return train, val, test, filename
-
-
-# In[13]:
-
-
-train, val, test, filename = choose_dataset(False)
-
-
-# In[14]:
-
-
-# 辞書の作成
-SRC.build_vocab(train)
-TRG.build_vocab(train)
-
-
-# In[15]:
-
-
-# 各データをバッチ化する
-# データの総数を割れる数にしないと学習時にエラーを吐く
-train_batch_size = 50
-test_batch_size = 32
-eval_batch_size = 2
-train_iter, val_iter, test_iter = data.BucketIterator.splits((train, val, test), sort = False,  batch_sizes = (train_batch_size,eval_batch_size, test_batch_size), device= device)
-
-
-# In[16]:
 
 
 class Encoder(nn.Module):
@@ -154,10 +82,6 @@ class Encoder(nn.Module):
     # LSTMに単語を入力して、Encoderからの出力とする
     outputs, (hidden, cell) = self.rnn(embedded)
     return hidden, cell
-
-
-# In[17]:
-
 
 class Decoder(nn.Module):
   def __init__(self, output_dim, emb_dim, hid_dim, n_layers, dropout):
@@ -189,9 +113,6 @@ class Decoder(nn.Module):
     return prediction, hidden, cell
 
 
-# In[18]:
-
-
 class Seq2Seq(nn.Module):
   def __init__(self, encoder, decoder, device):
     super().__init__()
@@ -221,50 +142,9 @@ class Seq2Seq(nn.Module):
     return outputs
 
 
-# In[19]:
-
-
-INPUT_DIM = len(SRC.vocab)
-OUTPUT_DIM = len(TRG.vocab)
-ENC_EMB_DIM = 256
-DEC_EMB_DIM = 256
-ENC_HID_DIM = 1024
-DEC_HID_DIM = 1024
-N_LAYERS = 2
-ENC_DROPOUT = 0.3
-DEC_DROPOUT = 0.3
-
-enc = Encoder(INPUT_DIM, ENC_EMB_DIM, ENC_HID_DIM, N_LAYERS, ENC_DROPOUT)
-dec = Decoder(OUTPUT_DIM, DEC_EMB_DIM, DEC_HID_DIM, N_LAYERS, DEC_DROPOUT)
-
-model = Seq2Seq(enc, dec, device).to(device)
-
-
-# In[20]:
-
-
 def init_weights(m):
     for name, param in m.named_parameters():
         nn.init.uniform_(param.data, -0.08, 0.08)
-
-model.apply(init_weights)
-
-
-# In[21]:
-
-
-optimizer = optim.Adam(model.parameters())
-
-
-# In[22]:
-
-
-SRC_PAD_IDX = SRC.vocab.stoi[SRC.pad_token]
-
-criterion = nn.CrossEntropyLoss(ignore_index = SRC_PAD_IDX)
-
-
-# In[23]:
 
 
 def train(model, iterator, optimizer, criterion, clip):
@@ -295,8 +175,6 @@ def train(model, iterator, optimizer, criterion, clip):
   return epoch_loss / len(iterator)
 
 
-# In[24]:
-
 
 def evaluate(model, iterator, criterion):
   model.eval()
@@ -322,61 +200,11 @@ def evaluate(model, iterator, criterion):
 
     return epoch_loss / len(iterator)
 
-
-# In[25]:
-
-
 def epoch_time(start_time, end_time):
   elapsed_time = end_time - start_time
   elapsed_mins = int(elapsed_time / 60)
   elapsed_secs = int(elapsed_time - (elapsed_mins*60))
   return elapsed_mins, elapsed_secs
-
-
-# In[ ]:
-
-
-epochs = 100
-clip = 1
-best_model = None
-
-
-best_valid_loss = float('inf')
-best_model = None
-for epoch in range(epochs):
-    
-    start_time = time.time()
-    
-    train_loss = train(model, train_iter, optimizer, criterion, clip)
-    valid_loss = evaluate(model, val_iter, criterion)
-    
-    end_time = time.time()
-    
-    epoch_mins, epoch_secs = epoch_time(start_time, end_time)
-    
-    if valid_loss < best_valid_loss:
-        best_valid_loss = valid_loss
-        best_model = model
-        #torch.save(model.state_dict(), 'tut1-model.pt')
-    
-    print("-"*65)
-    print(f'Epoch: {epoch+1:02} | Time: {epoch_mins}m {epoch_secs}s | Train Loss: {train_loss:.3f} | Val. Loss: {valid_loss:.3f}')
-
-
-# In[ ]:
-
-
-torch.save(model.state_dict(), '../model/seq2seq.pth')
-
-
-# In[ ]:
-
-
-model.state_dict(torch.load(",./model/seq2seq.pth"))
-
-
-# In[ ]:
-
 
 def gen_sentence(sentence, src_field, trg_field, model, max_len = 50):
   model.eval()
@@ -385,7 +213,6 @@ def gen_sentence(sentence, src_field, trg_field, model, max_len = 50):
   
   src_index = [src_field.vocab.stoi[i] for i in tokens]
   src_tensor = torch.LongTensor(src_index).unsqueeze(1).to(device)
-  src_len = torch.LongTensor([len(src_index)]).to(device)
   with torch.no_grad():
     hidden, cell = model.encoder(src_tensor)
   
@@ -407,10 +234,6 @@ def gen_sentence(sentence, src_field, trg_field, model, max_len = 50):
     trg_tokens = [src_field.init_token] + trg_tokens + [src_field.eos_token]
   return trg_tokens
 
-
-# In[ ]:
-
-
 def gen_sentence_list(path): 
   col, pred = [], []
   input, output = [], []
@@ -426,25 +249,7 @@ def gen_sentence_list(path):
   return input, output, pred
 
 
-# In[ ]:
-
-
-path = "./data/test.tsv"
-test_input, test_output, test_pred = gen_sentence_list(path)
-path = "./data/train.tsv"
-train_input, train_output, train_pred = gen_sentence_list(path)
-path = "./data/val.tsv"
-val_input, val_output, val_pred = gen_sentence_list(path)
-
-
-# In[ ]:
-
-
 import pandas as pd
-
-
-# In[ ]:
-
 
 def convert_list_to_df(in_list, out_list, pred_list):
   row = []
@@ -465,28 +270,99 @@ def convert_list_to_df(in_list, out_list, pred_list):
   return df
 
 
-# In[ ]:
+def main():
+  # pytorchのデータフィードの定義（重要！！）
+  print("preparing data...")
+  SRC = data.Field(sequential=True, tokenize = tokenizer, init_token='<sos>', eos_token='<eos>', lower=True)
+  TRG = data.Field(sequential=True, tokenize = tokenizer, init_token='<sos>', eos_token='<eos>', lower=True)
 
+  train, val, test, filename = choose_dataset(False, SRC, TRG)
 
-train_df = convert_list_to_df(train_input, train_output, train_pred)
-val_df = convert_list_to_df(val_input, val_output, val_pred)
-test_df = convert_list_to_df(test_input, test_output, test_pred)
+  # 辞書の作成
+  SRC.build_vocab(train)
+  TRG.build_vocab(train)
 
+  # 各データをバッチ化する
+  # データの総数を割れる数にしないと学習時にエラーを吐く
+  train_batch_size = 50
+  test_batch_size = 32
+  eval_batch_size = 2
+  train_iter, val_iter, test_iter = data.BucketIterator.splits((train, val, test), sort = False,  batch_sizes = (train_batch_size, eval_batch_size, test_batch_size), device = device)
 
-# In[ ]:
+  print("building model...")
+  INPUT_DIM = len(SRC.vocab)
+  OUTPUT_DIM = len(TRG.vocab)
+  ENC_EMB_DIM = 512
+  DEC_EMB_DIM = 512
+  ENC_HID_DIM = 1024
+  DEC_HID_DIM = 1024
+  N_LAYERS = 2
+  ENC_DROPOUT = 0.3
+  DEC_DROPOUT = 0.3
 
+  enc = Encoder(INPUT_DIM, ENC_EMB_DIM, ENC_HID_DIM, N_LAYERS, ENC_DROPOUT)
+  dec = Decoder(OUTPUT_DIM, DEC_EMB_DIM, DEC_HID_DIM, N_LAYERS, DEC_DROPOUT)
 
-df_s = pd.concat([train_df, test_df]).sort_values('input')
+  model = Seq2Seq(enc, dec, device).to(device)
 
+  print(model)
+  model.apply(init_weights)
 
-# In[ ]:
+  optimizer = optim.Adam(model.parameters())
 
+  SRC_PAD_IDX = SRC.vocab.stoi[SRC.pad_token]
 
-df_s.to_csv(filename)
+  criterion = nn.CrossEntropyLoss(ignore_index = SRC_PAD_IDX)
 
+  
+  epochs = 100
+  clip = 1
+  best_model = None
 
-# In[ ]:
+  print("training...")
+  best_valid_loss = float('inf')
 
+  for epoch in range(epochs):
+      
+      start_time = time.time()
+      
+      train_loss = train(model, train_iter, optimizer, criterion, clip)
+      valid_loss = evaluate(model, val_iter, criterion)
+      
+      end_time = time.time()
+      
+      epoch_mins, epoch_secs = epoch_time(start_time, end_time)
+      
+      if valid_loss < best_valid_loss:
+          best_valid_loss = valid_loss
+          best_model = model
+          #torch.save(model.state_dict(), 'tut1-model.pt')
+      
+      print("-"*65)
+      print(f'Epoch: {epoch+1:02} | Time: {epoch_mins}m {epoch_secs}s | Train Loss: {train_loss:.3f} | Val. Loss: {valid_loss:.3f}')
 
+  torch.save(model.state_dict(), '../model/seq2seq.pth')
 
+  model.state_dict(torch.load("../model/seq2seq.pth"))
 
+  print("generating sentence...")
+  path = "../data/test.tsv"
+  test_input, test_output, test_pred = gen_sentence_list(path)
+  path = "../data/train.tsv"
+  train_input, train_output, train_pred = gen_sentence_list(path)
+  path = "../data/val.tsv"
+  val_input, val_output, val_pred = gen_sentence_list(path)
+
+  train_df = convert_list_to_df(train_input, train_output, train_pred)
+  val_df = convert_list_to_df(val_input, val_output, val_pred)
+  test_df = convert_list_to_df(test_input, test_output, test_pred)
+
+  df_s = pd.concat([train_df, test_df]).sort_values('input')
+
+  df_s.to_csv(filename)
+
+  print("done!")
+
+  
+if __name__ == "__main__":
+  main()

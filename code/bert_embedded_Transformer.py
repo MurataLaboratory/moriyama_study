@@ -4,25 +4,23 @@
 # In[6]:
 
 
-import os
-os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
-
 
 # In[10]:
 
 
 # get_ipython().system('pip install transformers fugashi mecab-python3 ipadic torchtext')
 
-
+import os
 import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import TransformerEncoder, TransformerEncoderLayer, TransformerDecoder, TransformerDecoderLayer
+import pandas as pd
 
 class TransformerModel(nn.Module):
 
-    def __init__(self, ntoken, ninp, nhead, nhid, nlayers, dropout=0.5):
+    def __init__(self, ninp, nhead, nhid, nlayers, dropout=0.5):
         super(TransformerModel, self).__init__()
         self.model_type = 'Transformer'
         # self.linear = nn.Linear(32000 ,768)
@@ -34,7 +32,7 @@ class TransformerModel(nn.Module):
         self.encoder = bert_model.get_input_embeddings()
         self.ninp = ninp
         # self.decoder = bert_model.get_input_embeddings()
-        self.decoder = nn.Embedding(ntoken, ninp)
+        # self.decoder = nn.Embedding(ntoken, ninp)
         decoder_layers = TransformerDecoderLayer(ninp, nhead, nhid, dropout)
         self.transformer_decoder = TransformerDecoder(decoder_layers, 
                                                       nlayers
@@ -100,110 +98,17 @@ import random
 import numpy as np
 
 
-# In[13]:
-
-
-SEED = 1234
-
-random.seed(SEED)
-np.random.seed(SEED)
-torch.manual_seed(SEED)
-torch.cuda.manual_seed(SEED)
-torch.backends.cudnn.deterministic = True
-
-
-# 辞書はこれを使って復号する
-# 
 # https://huggingface.co/transformers/main_classes/tokenizer.html
 
-# In[14]:
-
-
 tok = BertJapaneseTokenizer.from_pretrained('cl-tohoku/bert-base-japanese')
-
-
-# In[ ]:
 
 
 def tokenizer(text):
   return tok.tokenize(text)
 
-
-# In[ ]:
-
-
-tok.convert_tokens_to_ids(tokenizer("今日は良い日です"))
-
-
-# In[ ]:
-
-
-path = "../data/data.tsv"
-src, trg, tmp = [], [], []
-with open(path, mode='r') as f:
-  for file in f:
-    sentence = file.split("\t")
-    tmp.append(sentence)
-
-random.shuffle(tmp)
-
-for sentence in tmp:
-    src.append(sentence[0])
-    trg.append(sentence[1].replace("\t", ""))
-
-
-# In[ ]:
-
-
-src_tensors = tok.__call__(text = src, text_pair = trg, padding=True, return_tensors='pt', return_attention_mask=False)
-trg_tensors = tok.__call__(text = trg, text_pair = src, padding=True, return_tensors='pt', return_attention_mask=False)
-
-
-# In[ ]:
-
-
-dataset = torch.utils.data.TensorDataset(src_tensors['input_ids'], trg_tensors['input_ids'])
-
-
-# In[ ]:
-
-
-train_size = int(len(dataset) * 0.8)
-valid_size = len(dataset) - train_size
-train_data, valid_data = torch.utils.data.random_split(dataset, [train_size, valid_size])
-
-
-# In[ ]:
-
-
-batch_size = 32
-train_data_loader = torch.utils.data.DataLoader(train_data, batch_size, shuffle=True)
-valid_data_loader = torch.utils.data.DataLoader(valid_data, batch_size, shuffle=True)
-
-
-# In[ ]:
-
-
-"""
-for x, y in train_data_loader:
-  print("src: ", x)
-  print("trg: ", y.size())
-"""
-
-
-# In[ ]:
-
-
-SRC = data.Field(sequential=True, tokenize = tokenizer, init_token='<sos>', eos_token='<eos>', lower = True)
-TRG = data.Field(sequential=True, tokenize = tokenizer, init_token='<sos>', eos_token='<eos>', lower = True)
-
-
-# In[ ]:
-
-
 # 重複のないデータセットか重複のあるデータセットを選ぶ
 # flagがTrueの時重複のないデータを返す
-def choose_dataset(flag = False):
+def choose_dataset(flag = False, SRC, TRG):
   if flag:
     train, val, test = data.TabularDataset.splits(
         path="../data/", 
@@ -225,69 +130,6 @@ def choose_dataset(flag = False):
   
   return train, val, test, filename
 
-
-# In[ ]:
-
-
-train, val, test, filename = choose_dataset(False)
-SRC.build_vocab(train)
-TRG.build_vocab(train)
-bert_model = BertForPreTraining.from_pretrained(
-    "cl-tohoku/bert-base-japanese", # 日本語Pre trainedモデルの指定
-    num_labels = 2, # ラベル数（今回はBinayなので2、数値を増やせばマルチラベルも対応可）
-    output_attentions = False, # アテンションベクトルを出力するか
-    output_hidden_states = True, # 隠れ層を出力するか
-)
-
-
-# In[ ]:
-
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-"""
-train_batch_size = 32
-test_batch_size = 32
-eval_batch_size = 32
-train_iter, val_iter, test_iter = data.BucketIterator.splits((train, val, test), sort = False,  batch_sizes = (train_batch_size,eval_batch_size, test_batch_size), device= device)
-"""
-
-
-# In[ ]:
-
-
-# data = next(iter(train_iter))
-
-
-# In[ ]:
-
-
-# data.src.size()
-
-
-# In[ ]:
-
-
-ntokens = len(TRG.vocab.itos) # the size of vocabulary
-emsize = 768 # embedding dimension
-nhid = 512 # the dimension of the feedforward network model in nn.TransformerEncoder
-nlayers = 2 # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder
-nhead = 2 # the number of heads in the multiheadattention models
-dropout = 0.3 # the dropout value
-model = TransformerModel(ntokens, emsize, nhead, nhid, nlayers, dropout).to(device)
-
-
-# In[ ]:
-
-
-
-
-# In[ ]:
-
-
-criterion = nn.CrossEntropyLoss(ignore_index=0)
-lr = 5 # learning rate
-optimizer = torch.optim.SGD(model.parameters(), lr=lr)
-scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1.0, gamma=0.95)
 
 import time
 def train(data_loader):
@@ -327,38 +169,7 @@ def evaluate(eval_model, data_loader):
         trg = trg[:].contiguous().view(-1)
         total_loss += criterion(output_flat, trg).item()
     return total_loss / (len(data_loader) - 1)
-
-
-# In[ ]:
-
-
-best_val_loss = float("inf")
-epochs = 20 # The number of epochs
-best_model = None
-model.init_weights()
-train_loss_list, eval_loss_list = [], []
-
-for epoch in range(1, epochs + 1):
-    epoch_start_time = time.time()
-    t_loss = train(train_data_loader)
-    val_loss = evaluate(model, valid_data_loader)
-    print('-' * 89)
-    print('| epoch {:3d} | time: {:5.2f}s | train loss {:5.2f} | valid loss {:5.2f} | '
-          .format(epoch, (time.time() - epoch_start_time), t_loss, val_loss))
-
-    train_loss_list.append(t_loss)
-    eval_loss_list.append(val_loss)
-    
-    if val_loss < best_val_loss:
-        best_val_loss = val_loss
-        best_model = model
-
-    scheduler.step()
-
-
-# In[ ]:
-
-
+"""
 from matplotlib import pyplot as plt
 y = list(range(epochs))
 train_loss = plt.plot(y, train_loss_list)
@@ -367,23 +178,7 @@ plt.xlabel("epochs")
 plt.ylabel("loss")
 plt.legend((train_loss[0], valid_loss[0]), ("train loss", "valid loss"),)
 plt.show()
-
-
-# In[ ]:
-
-
-torch.save(best_model.state_dict(), "/content/dirve/My Drive/Colab Notebooks/model/bert_embedded_transformer.pth")
-
-
-# In[ ]:
-
-
-model.init_weights()
-model.state_dict(torch.load("/content/dirve/My Drive/Colab Notebooks/model/bert_embedded_transformer.pth"))
-
-
-# In[ ]:
-
+"""
 
 def gen_sentence(sentence, tok, model, max_len = 50):
   model.eval()
@@ -431,21 +226,10 @@ def gen_sentence(sentence, tok, model, max_len = 50):
 
   return predict
 
-
-# In[ ]:
-
-
-sentence = "なるほど"
-gen_sentence(sentence, tok, model)
-
-
-# In[ ]:
-
-
 def gen_sentence_list(path): 
   col, pred = [], []
   input, output = [], []
-  with open(path, mode = 'r') as f:
+  with open(path, mode = 'r', encoding = "utf-8") as f:
     for file_list in f:
       col.append(file_list.split('\t'))
   for i in col:
@@ -453,18 +237,8 @@ def gen_sentence_list(path):
     output.append(i[1].replace("\n", ""))
 
   for sentence in input:
-    pred.append(gen_sentence(sentence, SRC, SRC, model))
+    pred.append(gen_sentence(sentence, tok, model))
   return input, output, pred
-
-
-# In[ ]:
-
-
-import pandas as pd
-
-
-# In[ ]:
-
 
 def convert_list_to_df(in_list, out_list, pred_list):
   row = []
@@ -484,35 +258,119 @@ def convert_list_to_df(in_list, out_list, pred_list):
   df = df.sort_values('input')
   return df
 
+def main():
+  os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
+  
+  SEED = 1234
 
-# In[ ]:
+  random.seed(SEED)
+  np.random.seed(SEED)
+  torch.manual_seed(SEED)
+  torch.cuda.manual_seed(SEED)
+  torch.backends.cudnn.deterministic = True
+  device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+  print("preparing data..")
+  path = "../data/data.tsv"
+  src, trg, tmp = [], [], []
+  with open(path, mode='r') as f:
+    for file in f:
+      sentence = file.split("\t")
+      tmp.append(sentence)
 
-train_df = convert_list_to_df(train_in, train_out, train_pred)
-val_df = convert_list_to_df(val_in, val_out, val_pred)
-test_df = convert_list_to_df(test_in, test_out, test_pred)
+  random.shuffle(tmp)
 
+  for sentence in tmp:
+      src.append(sentence[0])
+      trg.append(sentence[1].replace("\t", ""))
 
-# In[ ]:
+  src_tensors = tok.__call__(text = src, text_pair = trg, padding=True, return_tensors='pt', return_attention_mask=False)
+  trg_tensors = tok.__call__(text = trg, text_pair = src, padding=True, return_tensors='pt', return_attention_mask=False)
 
+  dataset = torch.utils.data.TensorDataset(src_tensors['input_ids'], trg_tensors['input_ids'])
 
-df_s = pd.concat([train_df, test_df]).sort_values('input')
+  train_size = int(len(dataset) * 0.8)
+  valid_size = len(dataset) - train_size
+  train_data, valid_data = torch.utils.data.random_split(dataset, [train_size, valid_size])
 
+  batch_size = 32
+  train_data_loader = torch.utils.data.DataLoader(train_data, batch_size, shuffle=True)
+  valid_data_loader = torch.utils.data.DataLoader(valid_data, batch_size, shuffle=True)
+  bert_model = BertForPreTraining.from_pretrained(
+      "cl-tohoku/bert-base-japanese", # 日本語Pre trainedモデルの指定
+      num_labels = 2, # ラベル数（今回はBinayなので2、数値を増やせばマルチラベルも対応可）
+      output_attentions = False, # アテンションベクトルを出力するか
+      output_hidden_states = True, # 隠れ層を出力するか
+  )
 
-# In[ ]:
+  print("building model...")
+  emsize = 768 # embedding dimension
+  nhid = 512 # the dimension of the feedforward network model in nn.TransformerEncoder
+  nlayers = 2 # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder
+  nhead = 2 # the number of heads in the multiheadattention models
+  dropout = 0.3 # the dropout value
+  model = TransformerModel( emsize, nhead, nhid, nlayers, dropout).to(device)
 
+  print(model)
+  criterion = nn.CrossEntropyLoss(ignore_index=0)
+  lr = 5 # learning rate
+  optimizer = torch.optim.SGD(model.parameters(), lr=lr)
+  scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1.0, gamma=0.95)
 
-df_s.head(10)
+  
+  best_val_loss = float("inf")
+  epochs = 20 # The number of epochs
+  best_model = None
+  model.init_weights()
+  train_loss_list, eval_loss_list = [], []
 
+  print("training model...")
+  for epoch in range(1, epochs + 1):
+      epoch_start_time = time.time()
+      t_loss = train(train_data_loader)
+      val_loss = evaluate(model, valid_data_loader)
+      print('-' * 89)
+      print('| epoch {:3d} | time: {:5.2f}s | train loss {:5.2f} | valid loss {:5.2f} | '
+            .format(epoch, (time.time() - epoch_start_time), t_loss, val_loss))
 
-# In[ ]:
+      train_loss_list.append(t_loss)
+      eval_loss_list.append(val_loss)
+      
+      if val_loss < best_val_loss:
+          best_val_loss = val_loss
+          best_model = model
 
+      scheduler.step()
 
-df_s.to_csv(filename)
+  torch.save(best_model.state_dict(), "../model/bert_embedded_transformer.pth")
 
+  model.init_weights()
+  model.state_dict(torch.load("../model/bert_embedded_transformer.pth"))
 
-# In[ ]:
+  print("generating sentence from text..")
+  path = "../data/test.tsv"
+  test_input, test_output, test_pred [], [], []
+  test_input, test_output, test_pred = gen_sentence_list(path)
+  path = "../data/train.tsv"
+  train_input, train_output, train_pred = [], [], []
+  train_input, train_output, train_pred = gen_sentence_list(path)
+  path = "../data/val.tsv"
+  val_input, val_output, val_pred = [], [], []
+  val_input, val_output, val_pred = gen_sentence_list(path)
 
+  print("converting list to dataframe")
+  train_df = convert_list_to_df(train_input, train_output, train_pred)
+  val_df = convert_list_to_df(val_input, val_output, val_pred)
+  test_df = convert_list_to_df(test_input, test_output, test_pred)
 
+  df_s = pd.concat([train_df, test_df]).sort_values('input')
+
+  print(df_s.head(10))
+
+  df_s.to_csv(filename)
+  print("done!")
+
+if __name__ == "__main__":
+  main()
 
 

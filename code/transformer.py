@@ -2,18 +2,8 @@
 # coding: utf-8
 
 # [code of transformer from pytorch](https://github.com/pytorch/pytorch/blob/master/torch/nn/modules/transformer.py)
-# 
-# 
 
-# In[1]:
-
-
-print('hello world')
 import os
-os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
-
-
-# In[2]:
 
 
 import math
@@ -64,9 +54,6 @@ class TransformerModel(nn.Module):
         return output
 
 
-# In[3]:
-
-
 class PositionalEncoding(nn.Module):
 
     def __init__(self, d_model, dropout=0.1, max_len=5000):
@@ -86,25 +73,12 @@ class PositionalEncoding(nn.Module):
         return self.dropout(x)
 
 
-# In[4]:
-
-
-get_ipython().system('pip install janome')
-
-
-# In[5]:
-
-
 import janome
 from janome.tokenizer import Tokenizer
 from torchtext import data
 from torchtext import datasets
 import random
 import numpy as np
-
-
-# In[6]:
-
 
 SEED = 1234
 
@@ -114,21 +88,13 @@ torch.manual_seed(SEED)
 torch.cuda.manual_seed(SEED)
 torch.backends.cudnn.deterministic = True
 
-
-# In[23]:
-
-
 j_t = Tokenizer()
 def tokenizer(text): 
     return [tok for tok in j_t.tokenize(text, wakati=True)]
 
-
-# In[24]:
-
-
 # 重複のないデータセットか重複のあるデータセットを選ぶ
 # flagがTrueの時重複のないデータを返す
-def choose_dataset(flag = False):
+def choose_dataset(flag = False, SRC):
   if flag:
     train, val, test = data.TabularDataset.splits(
         path="../data/", train='one_train.tsv',
@@ -144,54 +110,6 @@ def choose_dataset(flag = False):
   
   return train, val, test, filename
 
-
-# In[25]:
-
-
-SRC = data.Field(sequential=True, 
-                 tokenize=tokenizer,
-                 init_token='<sos>',
-                 eos_token='<eos>', 
-                 lower=True)
-train, val, test, filename = choose_dataset(True)
-
-
-# In[26]:
-
-
-SRC.build_vocab(train, min_freq=1)
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-train_batch_size = 16
-test_batch_size = 32
-eval_batch_size = 32
-train_iter, val_iter, test_iter = data.BucketIterator.splits((train, val, test), sort = False,  batch_sizes = (train_batch_size,eval_batch_size, test_batch_size), device= device)
-
-
-# In[27]:
-
-
-ntokens = len(SRC.vocab.stoi) # the size of vocabulary
-emsize = len(SRC.vocab.stoi) # embedding dimension
-nhid = 512 # the dimension of the feedforward network model in nn.TransformerEncoder
-nlayers = 2 # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder
-nhead = 2 # the number of heads in the multiheadattention models
-dropout = 0.3 # the dropout value
-model = TransformerModel(ntokens, emsize, nhead, nhid, nlayers, dropout).to(device)
-
-
-# In[ ]:
-
-
-model
-
-
-# In[ ]:
-
-
-criterion = nn.CrossEntropyLoss(ignore_index=SRC.vocab.stoi["<pad>"])
-lr = 5 # learning rate
-optimizer = torch.optim.SGD(model.parameters(), lr=lr)
-scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1.0, gamma=0.95)
 
 import time
 def train(iterator):
@@ -228,125 +146,71 @@ def evaluate(eval_model, data_source):
         output_flat = output[:].view(-1, output.shape[-1])
         targets = targets[:].view(-1)
         total_loss += len(data) * criterion(output_flat, targets).item()
-    return total_loss / (len(data_source) - 1)
-
-
-# In[ ]:
-
-
-best_val_loss = float("inf")
-epochs = 50 # The number of epochs
-best_model = None
-model.init_weights()
-train_loss_list, eval_loss_list = [], []
-
-for epoch in range(1, epochs + 1):
-    epoch_start_time = time.time()
-    t_loss = train(train_iter)
-    val_loss = evaluate(model, val_iter)
-    print('-' * 89)
-    print('| epoch {:3d} | time: {:5.2f}s | valid loss {:5.2f} | '
-          .format(epoch, (time.time() - epoch_start_time), val_loss))
-    
-    train_loss_list.append(t_loss)
-    eval_loss_list.append(val_loss)
-
-    if val_loss < best_val_loss:
-        best_val_loss = val_loss
-        best_model = model
-
-    scheduler.step()
-
-
-# In[ ]:
-
-
-from matplotlib import pyplot as plt
-y = list(range(epochs))
-train_loss = plt.plot(y, train_loss_list)
-valid_loss = plt.plot(y, eval_loss_list)
-plt.xlabel("epochs")
-plt.ylabel("train loss")
-plt.legend((train_loss[0], valid_loss[0]), ("train loss", "valid loss"),)
-plt.show()
-
-
-# In[ ]:
-
-
-test_loss = evaluate(best_model, test_iter)
-print('=' * 89)
-print('| End of training | test loss {:5.2f} | test ppl {:8.2f}'.format(
-    test_loss, math.exp(test_loss)))
-print('=' * 89)
-
-
-# In[ ]:
-
-
-torch.save(best_model.state_dict(), "/content/dirve/My Drive/Colab Notebooks/model/transformer.pth")
-
-
-# In[ ]:
-
-
-model.state_dict(torch.load("/content/dirve/My Drive/Colab Notebooks/model/transformer.pth"))
-
-
-# In[ ]:
+    return total_loss / len(data_source)
 
 
 def gen_sentence(sentence, src_field, trg_field, model, batch_size):
   model.eval()
-  in_str, out_str, pred, tmp = [], [], [], []
-  length = len(sentence)
+  device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+  tokens = [src_field.init_token] + tokenizer(sentence) + [src_field.eos_token]
+  src = [src_field.vocab.stoi[i] for i in tokens]
+  src = torch.LongTensor([src])
+  # print(src)
+  src = torch.t(src)
+  src = src.to(device)
+
+  src_tensor = model.encoder(src)
+  src_tensor = model.pos_encoder(src_tensor).to(device)
+  src_mask = model.generate_square_subsequent_mask(src_tensor.size()[0]).to(device)
+  # print(src_tensor)
   with torch.no_grad():
-    for _, batch in enumerate(sentence):
-      src = batch.SRC
-      trg = batch.TRG
-      output = model(src, trg)
-          
-      for j in range(min(length, batch_size)):
-        _, topi = output.data.topk(1)
-        _, topi_s = output.data.topk(2) 
-        for k in range(topi.size()[1]):
-          if topi[:, k][0] == trg_field.vocab.stoi["<eos>"]:
-            for m in range(topi_s.size()[0]):
-              for l in range(topi_s.size()[1]):
-                topi[m][l][0] = topi_s[m][l][1]
-          for i in range(topi.size()[0]):
-            if trg_field.vocab.itos[topi[:, k][i]] == "<eos>":
-              break
-            tmp.append(trg_field.vocab.itos[topi[:, k][i]])
-          pred.append(tmp)
-          tmp = []
-        #print(src.size())
-        in_str.append([src_field.vocab.itos[i.item()] for i in src[:,j] if src_field.vocab.itos[i.item()] != "<eos>"])
-        out_str.append([trg_field.vocab.itos[i.item()] for i in trg[:,j] if trg_field.vocab.itos[i.item()] != "<eos>"])
-      
-  return in_str, out_str, pred
+    src_output = model.transformer_encoder(src_tensor, src_mask)
 
+  trg = trg_field.eos_token
+  trg = torch.LongTensor([[trg]]).to(device)
+  output = []
+  # print("src sizse: ", src_output.size())
+  for i in range(max_len):
+    # print("trg size: ", trg.size())
+    trg_tensor = model.encoder(trg)
+    # print(trg_tensor.size())
+    trg_tensor = model.pos_encoder(trg_tensor).to(device)
+    trg_mask = model.generate_square_subsequent_mask(trg_tensor.size()[0]).to(device)
+    with torch.no_grad():
+      pred = model.transformer_decoder(trg_tensor, src_output, trg_mask)
+    # print("predicit sizes: ", pred.size())
+    pred_word_index = pred.argmax(2)[-1]
+    # add_word = trg_field.vocab.itos[pred_word_index.item()]
+    # print(tok.convert_ids_to_tokens(pred_word_index))
+    output.append(pred_word_index)
+    if pred_word_index == trg.vocab.stoi[trg_field.eos_token]:
+      break
 
-# In[ ]:
+    last_index = torch.LongTensor([[pred_word_index.item()]]).to(device)
+    trg = torch.cat((trg, last_index))
+    
+  # predict = "".join(output)
+  predict = [trg_field.vocab.itos[i] for i in output]
+  predict = "".join(predict)
 
+  return predict
 
-# 中間発表時にはテストデータは用いない
-test_in, test_out, test_pred = [],[],[]
-test_in, test_out, test_pred = gen_sentence(test_iter, SRC, SRC, best_model, test_batch_size)
-val_in, val_out, val_pred = [],[],[]
-val_in, val_out, val_pred = gen_sentence(val_iter, SRC, SRC, model, eval_batch_size)
-train_in, train_out, train_pred = [],[],[]
-train_in, train_out, train_pred = gen_sentence(train_iter, SRC, SRC, model, train_batch_size)
+def gen_sentence_list(path, SRC): 
+  col, pred = [], []
+  input, output = [], []
+  with open(path, mode = 'r', encoding = "utf-8") as f:
+    for file_list in f:
+      col.append(file_list.split('\t'))
+  for i in col:
+    input.append(i[0])
+    output.append(i[1].replace("\n", ""))
 
-
-# In[ ]:
-
+  for sentence in input:
+    pred.append(gen_sentence(sentence, SRC, SRC, model))
+  return input, output, pred
 
 import pandas as pd
-
-
-# In[ ]:
 
 
 def convert_list_to_df(in_list, out_list, pred_list):
@@ -367,35 +231,104 @@ def convert_list_to_df(in_list, out_list, pred_list):
   df = df.sort_values('input')
   return df
 
-
-# In[ ]:
-
-
-train_df = convert_list_to_df(train_in, train_out, train_pred)
-val_df = convert_list_to_df(val_in, val_out, val_pred)
-test_df = convert_list_to_df(test_in, test_out, test_pred)
-
-
-# In[ ]:
-
-
 df_s = pd.concat([train_df, test_df]).sort_values('input')
-
-
-# In[ ]:
-
 
 df_s.head(10)
 
-
-# In[ ]:
-
-
 df_s.to_csv(filename)
 
+def main():
+  os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
+  
+  print("preparing data...")
+  SRC = data.Field(sequential=True, 
+                 tokenize=tokenizer,
+                 init_token='<sos>',
+                 eos_token='<eos>', 
+                 lower=True)
+  train, val, test, filename = choose_dataset(False, SRC)
+  SRC.build_vocab(train, min_freq=1)
+  device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+  train_batch_size = 16
+  test_batch_size = 32
+  eval_batch_size = 32
+  train_iter, val_iter, test_iter = data.BucketIterator.splits((train, val, test), sort = False,  batch_sizes = (train_batch_size,eval_batch_size, test_batch_size), device= device)
+  
+  print("building model...")
+  ntokens = len(SRC.vocab.stoi) # the size of vocabulary
+  emsize = len(SRC.vocab.stoi) # embedding dimension
+  nhid = 512 # the dimension of the feedforward network model in nn.TransformerEncoder
+  nlayers = 2 # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder
+  nhead = 2 # the number of heads in the multiheadattention models
+  dropout = 0.3 # the dropout value
+  model = TransformerModel(ntokens, emsize, nhead, nhid, nlayers, dropout).to(device)
+  
+  print(model)
 
-# In[ ]:
+  criterion = nn.CrossEntropyLoss(ignore_index=SRC.vocab.stoi["<pad>"])
+  lr = 5 # learning rate
+  optimizer = torch.optim.SGD(model.parameters(), lr=lr)
+  scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1.0, gamma=0.95)
+
+  
+  best_val_loss = float("inf")
+  epochs = 50 # The number of epochs
+  best_model = None
+  model.init_weights()
+  train_loss_list, eval_loss_list = [], []
+
+  print("training...")
+  for epoch in range(1, epochs + 1):
+      epoch_start_time = time.time()
+      t_loss = train(train_iter)
+      val_loss = evaluate(model, val_iter)
+      print('-' * 89)
+      print('| epoch {:3d} | time: {:5.2f}s | valid loss {:5.2f} | '
+            .format(epoch, (time.time() - epoch_start_time), val_loss))
+      
+      train_loss_list.append(t_loss)
+      eval_loss_list.append(val_loss)
+
+      if val_loss < best_val_loss:
+          best_val_loss = val_loss
+          best_model = model
+
+      scheduler.step()
+
+
+  test_loss = evaluate(best_model, test_iter)
+  print('=' * 89)
+  print('| End of training | test loss {:5.2f} | test ppl {:8.2f}'.format(
+      test_loss, math.exp(test_loss)))
+  print('=' * 89)
+  torch.save(best_model.state_dict(), "../model/transformer.pth")
+
+  model.state_dict(torch.load("../model/transformer.pth"))
+
+  # 中間発表時にはテストデータは用いない
+  print("generating sentence from text..")
+  path = "../data/test.tsv"
+  test_input, test_output, test_pred [], [], []
+  test_input, test_output, test_pred = gen_sentence_list(path)
+  path = "../data/train.tsv"
+  train_input, train_output, train_pred = [], [], []
+  train_input, train_output, train_pred = gen_sentence_list(path)
+  path = "../data/val.tsv"
+  val_input, val_output, val_pred = [], [], []
+  val_input, val_output, val_pred = gen_sentence_list(path)
+
+  train_df = convert_list_to_df(train_input, train_output, train_pred)
+  val_df = convert_list_to_df(val_input, val_output, val_pred)
+  test_df = convert_list_to_df(test_input, test_output, test_pred)
+
+  df_s = pd.concat([train_df, test_df]).sort_values('input')
+
+  print(df_s.head(10))
+
+  df_s.to_csv(filename)
+  print("done!")
 
 
 
-
+if __name__ == "__main__":
+  main()

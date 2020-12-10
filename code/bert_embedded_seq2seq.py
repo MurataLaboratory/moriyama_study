@@ -36,55 +36,9 @@ def tokenizer(text):
   return tok.tokenize(text)
 
 
-
-path = "../data/data.tsv"
-src, trg, tmp = [], [], []
-with open(path, mode = 'r', encoding="utf-8") as f:
-    for file in f:
-        sentence = file.split("\t")
-        tmp.append(sentence)
-
-random.shuffle(tmp)
-
-for sentence in tmp:
-    src.append(sentence[0])
-    trg.append(sentence[1].replace("\n", ""))
-
-src_tensors = tok.__call__(text=src, text_pair=trg, padding=True, return_tensors='pt', return_attention_mask=False)
-trg_tensors = tok.__call__(text=trg, text_pair=src, padding=True, return_tensors='pt', return_attention_mask=False)
-
-
-# In[8]:
-
-
-dataset = torch.utils.data.TensorDataset(src_tensors['input_ids'],
-                                        trg_tensors['input_ids'])
-train_size = int(len(dataset) * 0.8)
-valid_size = len(dataset) - train_size
-train_data, valid_data = torch.utils.data.random_split(dataset, [train_size, valid_size])
-
-
-# In[9]:
-
-
-batch_size = 32
-train_data_loader = torch.utils.data.DataLoader(train_data, batch_size, shuffle=True)
-valid_data_loader = torch.utils.data.DataLoader(valid_data, batch_size, shuffle=True)
-
-
-# In[10]:
-
-
-SRC = torchtext.data.Field(sequential=True, tokenize = tokenizer, init_token='<sos>', eos_token='<eos>', lower = True)
-TRG = torchtext.data.Field(sequential=True, tokenize = tokenizer, init_token='<sos>', eos_token='<eos>', lower = True)
-
-
-# In[11]:
-
-
 # 重複のないデータセットか重複のあるデータセットを選ぶ
 # flagがTrueの時重複のないデータを返す
-def choose_dataset(flag = False):
+def choose_dataset(flag = False, SRC, TRG):
   if flag:
     train, val, test = torchtext.data.TabularDataset.splits(
         path="../data/", train='one_train.tsv',
@@ -101,33 +55,6 @@ def choose_dataset(flag = False):
   return train, val, test, filename
 
 
-# In[12]:
-
-
-train, val, test, filename= choose_dataset(False)
-
-
-# In[13]:
-
-
-SRC.build_vocab(train)
-TRG.build_vocab(train)
-
-
-# In[14]:
-
-
-bert_model = BertForPreTraining.from_pretrained(
-    "cl-tohoku/bert-base-japanese", # 日本語Pre trainedモデルの指定
-    num_labels = 2, # ラベル数（今回はBinayなので2、数値を増やせばマルチラベルも対応可）
-    output_attentions = False, # アテンションベクトルを出力するか
-    output_hidden_states = True, # 隠れ層を出力するか
-)
-
-
-# In[15]:
-
-
 class Encoder(nn.Module):
   def __init__(self, input_dim, emb_dim, hid_dim, n_layers, dropout):
     super().__init__()
@@ -142,10 +69,6 @@ class Encoder(nn.Module):
     embedded = self.dropout(self.embedding(src))
     outputs, (hidden, cell) = self.rnn(embedded)
     return hidden, cell
-
-
-# In[16]:
-
 
 
 class Decoder(nn.Module):
@@ -172,8 +95,6 @@ class Decoder(nn.Module):
 
     return prediction, hidden, cell
 
-
-# In[17]:
 
 
 class Seq2Seq(nn.Module):
@@ -206,55 +127,11 @@ class Seq2Seq(nn.Module):
     return outputs
 
 
-# In[18]:
-
-
-tok.vocab_size
-
-
-# In[19]:
-
-
-INPUT_DIM = len(SRC.vocab)
-OUTPUT_DIM = tok.vocab_size
-# OUTPUT_DIM = 3454
-ENC_EMB_DIM = 768
-DEC_EMB_DIM = 768
-ENC_HID_DIM = 512
-DEC_HID_DIM = 512
-N_LAYERS = 2
-ENC_DROPOUT = 0.3
-DEC_DROPOUT = 0.3
-
-enc = Encoder(INPUT_DIM, ENC_EMB_DIM, ENC_HID_DIM, N_LAYERS, ENC_DROPOUT)
-dec = Decoder(OUTPUT_DIM, DEC_EMB_DIM, DEC_HID_DIM, N_LAYERS, DEC_DROPOUT)
-
-model = Seq2Seq(enc, dec, device).to(device)
-
-
-# In[20]:
-
-
 def init_weights(m):
     for name, param in m.named_parameters():
         nn.init.uniform_(param.data, -0.08, 0.08)
 
-model.apply(init_weights)
 
-
-# In[21]:
-
-
-optimizer = optim.Adam(model.parameters())
-
-
-# In[22]:
-
-
-criterion = nn.CrossEntropyLoss(ignore_index = 0)
-
-
-# In[23]:
 
 
 def train(model, data_loader, optimizer, criterion, clip):
@@ -282,10 +159,6 @@ def train(model, data_loader, optimizer, criterion, clip):
 
   return epoch_loss / len(data_loader)
 
-
-# In[27]:
-
-
 def evaluate(model, data_loader, criterion):
   model.eval()
 
@@ -309,55 +182,11 @@ def evaluate(model, data_loader, criterion):
 
     return epoch_loss / len(data_loader)
 
-
-# In[28]:
-
-
 def epoch_time(start_time, end_time):
   elapsed_time = end_time - start_time
   elapsed_mins = int(elapsed_time / 60)
   elapsed_secs = int(elapsed_time - (elapsed_mins*60))
   return elapsed_mins, elapsed_secs
-
-
-# In[29]:
-
-
-epochs = 100
-clip = 1
-best_valid_loss = float('inf')
-best_model = None
-
-for epoch in range(epochs):
-    
-    start_time = time.time()
-    
-    train_loss = train(model, train_data_loader, optimizer, criterion, clip)
-    valid_loss = evaluate(model, valid_data_loader, criterion)
-    
-    end_time = time.time()
-    
-    epoch_mins, epoch_secs = epoch_time(start_time, end_time)
-    
-    if valid_loss < best_valid_loss:
-        best_valid_loss = valid_loss
-        best_model = model
-
-    print("-"*65)
-    print(f'Epoch: {epoch+1:02} | Time: {epoch_mins}m {epoch_secs}s | Train Loss: {train_loss:.3f} | Val. Loss: {valid_loss:.3f}')
-
-
-torch.save(best_model.state_dict(), '../model/bert_embedded_seq2seq.pth')
-
-
-# In[ ]:
-
-
-model.state_dict(torch.load("../model/bert_embedded_seq2seq.pth"))
-
-
-# In[ ]:
-
 
 def gen_sentence(sentence, tok, model, max_len = 50):
     model.eval()
@@ -396,9 +225,6 @@ def gen_sentence(sentence, tok, model, max_len = 50):
     return predict
 
 
-# In[ ]:
-
-
 def gen_sentence_list(path): 
   col, pred = [], []
   input, output = [], []
@@ -412,30 +238,6 @@ def gen_sentence_list(path):
   for sentence in input:
     pred.append(gen_sentence(sentence, SRC, TRG, best_model))
   return input, output, pred
-
-
-# In[ ]:
-
-
-path = "/content/dirve/My Drive/Colab Notebooks/data/test.tsv"
-test_input, test_output, test_pred = gen_sentence_list(path)
-
-
-# In[ ]:
-
-
-path = "/content/dirve/My Drive/Colab Notebooks/data/train.tsv"
-train_input, train_output, train_pred = gen_sentence_list(path)
-
-
-# In[ ]:
-
-
-path = "/content/dirve/My Drive/Colab Notebooks/data/val.tsv"
-val_input, val_output, val_pred = gen_sentence_list(path)
-
-
-# In[ ]:
 
 
 import pandas as pd
@@ -454,41 +256,124 @@ def convert_list_to_df(input, output, pred_list):
   return df
 
 
-# In[ ]:
+def main():
+  path = "../data/data.tsv"
+  src, trg, tmp = [], [], []
+  with open(path, mode = 'r', encoding="utf-8") as f:
+      for file in f:
+          sentence = file.split("\t")
+          tmp.append(sentence)
+
+  random.shuffle(tmp)
+
+  for sentence in tmp:
+      src.append(sentence[0])
+      trg.append(sentence[1].replace("\n", ""))
+
+  src_tensors = tok.__call__(text=src, text_pair=trg, padding=True, return_tensors='pt', return_attention_mask=False)
+  trg_tensors = tok.__call__(text=trg, text_pair=src, padding=True, return_tensors='pt', return_attention_mask=False)
+
+  dataset = torch.utils.data.TensorDataset(src_tensors['input_ids'],
+                                          trg_tensors['input_ids'])
+  train_size = int(len(dataset) * 0.8)
+  valid_size = len(dataset) - train_size
+  train_data, valid_data = torch.utils.data.random_split(dataset, [train_size, valid_size])
+
+  batch_size = 32
+  train_data_loader = torch.utils.data.DataLoader(train_data, batch_size, shuffle=True)
+  valid_data_loader = torch.utils.data.DataLoader(valid_data, batch_size, shuffle=True)
+
+  SRC = torchtext.data.Field(sequential=True, tokenize = tokenizer, init_token='<sos>', eos_token='<eos>', lower = True)
+  TRG = torchtext.data.Field(sequential=True, tokenize = tokenizer, init_token='<sos>', eos_token='<eos>', lower = True)
+
+  train, val, test, filename= choose_dataset(False, SRC, TRG)
+
+  SRC.build_vocab(train)
+  TRG.build_vocab(train)
+
+  bert_model = BertForPreTraining.from_pretrained(
+      "cl-tohoku/bert-base-japanese", # 日本語Pre trainedモデルの指定
+      num_labels = 2, # ラベル数（今回はBinayなので2、数値を増やせばマルチラベルも対応可）
+      output_attentions = False, # アテンションベクトルを出力するか
+      output_hidden_states = True, # 隠れ層を出力するか
+  )
+
+  print("building model...")
+  INPUT_DIM = len(SRC.vocab)
+  OUTPUT_DIM = tok.vocab_size
+  # OUTPUT_DIM = 3454
+  ENC_EMB_DIM = 768
+  DEC_EMB_DIM = 768
+  ENC_HID_DIM = 1024
+  DEC_HID_DIM = 1024
+  N_LAYERS = 2
+  ENC_DROPOUT = 0.3
+  DEC_DROPOUT = 0.3
+
+  enc = Encoder(INPUT_DIM, ENC_EMB_DIM, ENC_HID_DIM, N_LAYERS, ENC_DROPOUT)
+  dec = Decoder(OUTPUT_DIM, DEC_EMB_DIM, DEC_HID_DIM, N_LAYERS, DEC_DROPOUT)
+
+  model = Seq2Seq(enc, dec, device).to(device)
+
+  model.apply(init_weights)
+
+  optimizer = optim.Adam(model.parameters())
+
+  criterion = nn.CrossEntropyLoss(ignore_index = 0)
+
+  epochs = 100
+  clip = 1
+  best_valid_loss = float('inf')
+  best_model = None
+
+  print("training...")
+
+  for epoch in range(epochs):
+      
+      start_time = time.time()
+      
+      train_loss = train(model, train_data_loader, optimizer, criterion, clip)
+      valid_loss = evaluate(model, valid_data_loader, criterion)
+      
+      end_time = time.time()
+      
+      epoch_mins, epoch_secs = epoch_time(start_time, end_time)
+      
+      if valid_loss < best_valid_loss:
+          best_valid_loss = valid_loss
+          best_model = model
+
+      print("-"*65)
+      print(f'Epoch: {epoch+1:02} | Time: {epoch_mins}m {epoch_secs}s | Train Loss: {train_loss:.3f} | Val. Loss: {valid_loss:.3f}')
 
 
-train_df = convert_list_to_df(train_input, train_output, train_pred)
-val_df = convert_list_to_df(val_input, val_output, val_pred)
-test_df = convert_list_to_df(test_input, test_output, test_pred)
+  torch.save(best_model.state_dict(), '../model/bert_embedded_seq2seq.pth')
 
 
-# In[ ]:
+  model.apply(init_weights)
+  model.state_dict(torch.load("../model/bert_embedded_seq2seq.pth"))
+
+  print("generating sentences...")
+  path = "/content/dirve/My Drive/Colab Notebooks/data/test.tsv"
+  test_input, test_output, test_pred = gen_sentence_list(path)
+
+  path = "/content/dirve/My Drive/Colab Notebooks/data/train.tsv"
+  train_input, train_output, train_pred = gen_sentence_list(path)
 
 
-df_s = pd.concat([train_df, test_df])
-df_s = df_s.sort_values("input")
+  path = "/content/dirve/My Drive/Colab Notebooks/data/val.tsv"
+  val_input, val_output, val_pred = gen_sentence_list(path)
+
+  
+  train_df = convert_list_to_df(train_input, train_output, train_pred)
+  val_df = convert_list_to_df(val_input, val_output, val_pred)
+  test_df = convert_list_to_df(test_input, test_output, test_pred)
+
+  df_s = pd.concat([train_df, test_df])
+  df_s = df_s.sort_values("input")
 
 
-# In[ ]:
+  df_s.to_csv(filename)
 
-
-df_s
-
-
-# In[ ]:
-
-
-df_s.to_csv(filename)
-
-
-# In[ ]:
-
-
-# df_s.to_csv("/content/dirve/My Drive/Colab Notebooks/csv/one_result_bertSeq2seq.csv")
-
-
-# In[ ]:
-
-
-
-
+if __name__ == "__main__":
+  main()
