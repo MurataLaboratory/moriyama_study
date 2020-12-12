@@ -25,7 +25,12 @@ print('hello world')
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # device = torch.device("cpu")
 
-
+bert_model = BertForPreTraining.from_pretrained(
+    "cl-tohoku/bert-base-japanese",  # 日本語Pre trainedモデルの指定
+    num_labels=2,  # ラベル数（今回はBinayなので2、数値を増やせばマルチラベルも対応可）
+    output_attentions=False,  # アテンションベクトルを出力するか
+    output_hidden_states=True,  # 隠れ層を出力するか
+)
 tok = BertJapaneseTokenizer.from_pretrained('cl-tohoku/bert-base-japanese')
 
 
@@ -35,7 +40,7 @@ def tokenizer(text):
 
 # 重複のないデータセットか重複のあるデータセットを選ぶ
 # flagがTrueの時重複のないデータを返す
-def choose_dataset(flag=False, SRC, TRG):
+def choose_dataset(flag, SRC, TRG):
     if flag:
         train, val, test = torchtext.data.TabularDataset.splits(
             path="../data/", train='one_train.tsv',
@@ -53,7 +58,7 @@ def choose_dataset(flag=False, SRC, TRG):
 
 
 class Encoder(nn.Module):
-    def __init__(self, input_dim, emb_dim, hid_dim, n_layers, dropout):
+    def __init__(self,  emb_dim, hid_dim, n_layers, dropout):
         super().__init__()
         self.hid_dim = hid_dim
         self.n_layers = n_layers
@@ -289,25 +294,7 @@ def main():
     valid_data_loader = torch.utils.data.DataLoader(
         valid_data, batch_size, shuffle=True)
 
-    SRC = torchtext.data.Field(sequential=True, tokenize=tokenizer,
-                               init_token='<sos>', eos_token='<eos>', lower=True)
-    TRG = torchtext.data.Field(sequential=True, tokenize=tokenizer,
-                               init_token='<sos>', eos_token='<eos>', lower=True)
-
-    train, val, test, filename = choose_dataset(False, SRC, TRG)
-
-    SRC.build_vocab(train)
-    TRG.build_vocab(train)
-
-    bert_model = BertForPreTraining.from_pretrained(
-        "cl-tohoku/bert-base-japanese",  # 日本語Pre trainedモデルの指定
-        num_labels=2,  # ラベル数（今回はBinayなので2、数値を増やせばマルチラベルも対応可）
-        output_attentions=False,  # アテンションベクトルを出力するか
-        output_hidden_states=True,  # 隠れ層を出力するか
-    )
-
     print("building model...")
-    INPUT_DIM = len(SRC.vocab)
     OUTPUT_DIM = tok.vocab_size
     # OUTPUT_DIM = 3454
     ENC_EMB_DIM = 768
@@ -318,7 +305,7 @@ def main():
     ENC_DROPOUT = 0.3
     DEC_DROPOUT = 0.3
 
-    enc = Encoder(INPUT_DIM, ENC_EMB_DIM,
+    enc = Encoder(ENC_EMB_DIM,
                   ENC_HID_DIM, N_LAYERS, ENC_DROPOUT)
     dec = Decoder(OUTPUT_DIM, DEC_EMB_DIM,
                   DEC_HID_DIM, N_LAYERS, DEC_DROPOUT)
@@ -331,7 +318,7 @@ def main():
 
     criterion = nn.CrossEntropyLoss(ignore_index=0)
 
-    epochs = 100
+    epochs = 1
     clip = 1
     best_valid_loss = float('inf')
     best_model = None
