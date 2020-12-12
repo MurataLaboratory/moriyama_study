@@ -234,7 +234,7 @@ def gen_sentence(sentence, src_field, trg_field, model, max_len = 50):
     trg_tokens = [src_field.init_token] + trg_tokens + [src_field.eos_token]
   return trg_tokens
 
-def gen_sentence_list(path): 
+def gen_sentence_list(path):
   col, pred = [], []
   input, output = [], []
   with open(path, mode = 'r') as f:
@@ -242,7 +242,7 @@ def gen_sentence_list(path):
       col.append(file_list.split('\t'))
   for i in col:
     input.append(i[0])
-    output.append(i[1])
+    output.append(i[1].replace("\n", ""))
 
   for sentence in input:
     pred.append(gen_sentence(sentence, SRC, TRG, model))
@@ -292,8 +292,8 @@ def main():
   print("building model...")
   INPUT_DIM = len(SRC.vocab)
   OUTPUT_DIM = len(TRG.vocab)
-  ENC_EMB_DIM = 512
-  DEC_EMB_DIM = 512
+  ENC_EMB_DIM = 768
+  DEC_EMB_DIM = 768
   ENC_HID_DIM = 1024
   DEC_HID_DIM = 1024
   N_LAYERS = 2
