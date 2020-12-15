@@ -22,6 +22,8 @@ class TransformerModel(nn.Module):
 
     def __init__(self, ninp, nhead, nhid, nlayers, dropout=0.5):
         super(TransformerModel, self).__init__()
+        if ninp%2 == 1:
+          ninp += 1
         self.model_type = 'Transformer'
         # self.linear = nn.Linear(32000 ,768)
         self.pos_encoder = PositionalEncoding(ninp, dropout)
@@ -87,8 +89,6 @@ class PositionalEncoding(nn.Module):
         x = x + self.pe[:x.size(0), :]
         return self.dropout(x)
 
-
-# In[12]:
 
 
 from torchtext import data
@@ -317,7 +317,7 @@ def main():
   optimizer = torch.optim.SGD(model.parameters(), lr=lr)
   scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1.0, gamma=0.95)
 
-  
+
   best_val_loss = float("inf")
   epochs = 20 # The number of epochs
   best_model = None

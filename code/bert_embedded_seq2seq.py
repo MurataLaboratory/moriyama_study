@@ -149,7 +149,6 @@ def train(model, data_loader, optimizer, criterion, clip):
         output_dim = output.shape[-1]
         output = output[:].view(-1, output_dim)
         trg = trg[:].contiguous().view(-1)
-
         loss = criterion(output, trg)
         loss.backward()
         torch.nn.utils.clip_grad_norm(model.parameters(), clip)
@@ -194,16 +193,15 @@ def epoch_time(start_time, end_time):
 def gen_sentence(sentence, tok, model, max_len=50):
     model.eval()
 
-    sentence = tok.tokenize(sentnece)
+    sentence = tok.tokenize(sentence)
     src = [tok.convert_tokens_to_ids(
         "[CLS]")] + tok.convert_tokens_to_ids(sentence) + [tok.convert_tokens_to_ids("[SEP]")]
 
     src = torch.LongTensor([src])
     src = torch.t(src)
-    src = src.to(device)
-
-    src_tensor = model.encoder(src)
-    src_tensor = model.pos_encoder(src_tensor).to(device)
+    src_tensor = src.to(device)
+    # print(src)
+    # src_tensor = model.encoder(src)
     with torch.no_grad():
         hidden, cell = model.encoder(src_tensor)
 
@@ -218,18 +216,18 @@ def gen_sentence(sentence, tok, model, max_len=50):
         if pred_token == 3:
             break
 
-    if len(trg_tokens) == 2:
-        print(trg_tokens)
-        trg_tokens = [" "]
-        trg_tokens = [src_field.init_token] + \
-            trg_tokens + [src_field.eos_token]
+    if len(trg_index) == 2:
+        print(trg_index)
+        trg_index = ["-"]
+        trg_index = [tok.convert_tokens_to_ids(
+            "[CLS]")] + trg_index + [tok.convert_tokens_to_ids("[SEP]")]
 
     predict = tok.convert_ids_to_tokens(trg_index)
     predit = "".join(predict)
     return predict
 
 
-def gen_sentence_list(path):
+def gen_sentence_list(model, path, tok):
     col, pred = [], []
     input, output = [], []
     with open(path, mode='r') as f:
@@ -240,7 +238,7 @@ def gen_sentence_list(path):
         output.append(i[1])
 
     for sentence in input:
-        pred.append(gen_sentence(sentence, SRC, TRG, best_model))
+        pred.append(gen_sentence(sentence, tok, model))
     return input, output, pred
 
 
@@ -318,7 +316,7 @@ def main():
 
     criterion = nn.CrossEntropyLoss(ignore_index=0)
 
-    epochs = 1
+    epochs = 100
     clip = 1
     best_valid_loss = float('inf')
     best_model = None
@@ -352,14 +350,16 @@ def main():
     model.state_dict(torch.load("../model/bert_embedded_seq2seq.pth"))
 
     print("generating sentences...")
-    path = "/content/dirve/My Drive/Colab Notebooks/data/test.tsv"
-    test_input, test_output, test_pred = gen_sentence_list(path)
+    path = "../data/test.tsv"
+    test_input, test_output, test_pred = gen_sentence_list(
+        model, path, tok)
 
-    path = "/content/dirve/My Drive/Colab Notebooks/data/train.tsv"
-    train_input, train_output, train_pred = gen_sentence_list(path)
+    path = "../data/train.tsv"
+    train_input, train_output, train_pred = gen_sentence_list(
+        model, path, tok)
 
-    path = "/content/dirve/My Drive/Colab Notebooks/data/val.tsv"
-    val_input, val_output, val_pred = gen_sentence_list(path)
+    path = "../data/val.tsv"
+    val_input, val_output, val_pred = gen_sentence_list(model, path, tok)
 
     train_df = convert_list_to_df(train_input, train_output, train_pred)
     val_df = convert_list_to_df(val_input, val_output, val_pred)
@@ -368,7 +368,7 @@ def main():
     df_s = pd.concat([train_df, test_df])
     df_s = df_s.sort_values("input")
 
-    df_s.to_csv(filename)
+    df_s.to_csv("../csv/result_bert_embedded_seq2seq.csv")
 
     print("done!!!")
 
