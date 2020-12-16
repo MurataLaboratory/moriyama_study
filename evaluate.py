@@ -40,5 +40,5 @@ def eval_score(df):
         bleu_scores.append(sentence_bleu(answer, predict))
 
         predict, answer = [], []
-    
+
     return percentage, express_kind, bleu_scores
