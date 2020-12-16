@@ -56,6 +56,8 @@ class TransformerModel(nn.Module):
         # self.decoder.weight.data.uniform_(-initrange, initrange)
 
     def forward(self, src, trg):
+        src_mask = self.generate_square_subsequent_mask(
+            src.size()[0]).to(device)
         trg_mask = self.generate_square_subsequent_mask(
             trg.size()[0]).to(device)
         # 分散表現に変換
@@ -65,7 +67,7 @@ class TransformerModel(nn.Module):
         src = self.pos_encoder(src)
         trg = self.pos_encoder(trg)
         # モデルにデータを入れる
-        output = self.transformer_encoder(src)
+        output = self.transformer_encoder(src, mask = src_mask)
         # デコーダにエンコーダの出力を入れる（ここがおかしい）
         output = self.transformer_decoder(trg, output, tgt_mask=trg_mask)
         return output
@@ -290,10 +292,10 @@ def main():
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1.0, gamma=0.95)
 
     best_val_loss = float("inf")
-    epochs = 1  # The number of epochs
+    epochs = 50  # The number of epochs
     best_model = None
     model.init_weights()
-    """
+
     print("training...")
     for epoch in range(1, epochs + 1):
         epoch_start_time = time.time()
@@ -314,8 +316,8 @@ def main():
     print('| End of training | test loss {:5.2f} | test ppl {:8.2f}'.format(
         test_loss, math.exp(test_loss)))
     print('=' * 89)
+
     torch.save(best_model.state_dict(), "../model/transformer.pth")
-    """
     model.state_dict(torch.load("../model/transformer.pth"))
 
     # 中間発表時にはテストデータは用いない

@@ -18,7 +18,7 @@ print('hello world')
 # 必要なモジュールのインポート
 
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 
 SEED = 1234
 
@@ -302,7 +302,7 @@ def main():
     DEC_EMB_DIM = 512
     ENC_HID_DIM = 1024
     DEC_HID_DIM = 1024
-    N_LAYERS = 2
+    N_LAYERS = 3
     ENC_DROPOUT = 0.3
     DEC_DROPOUT = 0.3
 

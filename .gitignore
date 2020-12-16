@@ -19,3 +19,6 @@ ptb.*
 /model/*.pth
 
 data
+
+/code/*.out
+/code/*.log
