@@ -16,9 +16,9 @@ print('hello world')
 
 
 # 必要なモジュールのインポート
+gpus = (0, 1)
 
-
-device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+device = torch.device(f"cuda:{min(gpus)}" if len(gpus) > 0 else "cpu")
 
 SEED = 1234
 
@@ -236,6 +236,7 @@ def gen_sentence(sentence, src_field, trg_field, model, max_len=50):
             trg_tokens + [src_field.eos_token]
     return trg_tokens
 
+from tqdm import tqdm
 
 def gen_sentence_list(model, path, SRC, TRG):
     col, pred = [], []
@@ -246,9 +247,10 @@ def gen_sentence_list(model, path, SRC, TRG):
     for i in col:
         input.append(i[0])
         output.append(i[1].replace("\n", ""))
-
+    bar = tqdm(total = len(input))
     for sentence in input:
         pred.append(gen_sentence(sentence, SRC, TRG, model))
+        bar.update(1)
     return input, output, pred
 
 

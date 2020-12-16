@@ -21,8 +21,9 @@ import torch.nn as nn
 import torch
 print('hello world')
 
+gpus = (0, 1)
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device(f"cuda:{min(gpus)}" if len(gpus) > 0 else "cpu")
 # device = torch.device("cpu")
 
 bert_model = BertForPreTraining.from_pretrained(
@@ -189,7 +190,6 @@ def epoch_time(start_time, end_time):
     elapsed_secs = int(elapsed_time - (elapsed_mins*60))
     return elapsed_mins, elapsed_secs
 
-
 def gen_sentence(sentence, tok, model, max_len=50):
     model.eval()
 
@@ -226,6 +226,7 @@ def gen_sentence(sentence, tok, model, max_len=50):
     predit = "".join(predict)
     return predict
 
+from tqdm import tqdm
 
 def gen_sentence_list(model, path, tok):
     col, pred = [], []
@@ -236,9 +237,10 @@ def gen_sentence_list(model, path, tok):
     for i in col:
         input.append(i[0])
         output.append(i[1])
-
+    bar = tqdm(total = len(input))
     for sentence in input:
         pred.append(gen_sentence(sentence, tok, model))
+        bar.update(1)
     return input, output, pred
 
 

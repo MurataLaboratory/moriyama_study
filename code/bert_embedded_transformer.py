@@ -20,8 +20,9 @@ bert_model = BertForPreTraining.from_pretrained(
       output_attentions = False, # アテンションベクトルを出力するか
       output_hidden_states = True, # 隠れ層を出力するか
   )
+gpus = (0, 1)
 
-device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+device = torch.device(f"cuda:{min(gpus)}" if len(gpus) > 0 else "cpu")
 
 class TransformerModel(nn.Module):
 
@@ -222,6 +223,8 @@ def gen_sentence(sentence, tok, model, max_len = 50):
 
   return predict
 
+from tqdm import tqdm
+
 def gen_sentence_list(model, path): 
   col, pred = [], []
   input, output = [], []
@@ -232,8 +235,10 @@ def gen_sentence_list(model, path):
     input.append(i[0])
     output.append(i[1].replace("\n", ""))
 
+  bar = tqdm(total = len(input))
   for sentence in input:
     pred.append(gen_sentence(sentence, tok, model))
+    bar.update(1)
   return input, output, pred
 
 def convert_list_to_df(in_list, out_list, pred_list):

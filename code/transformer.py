@@ -20,7 +20,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import TransformerEncoder, TransformerEncoderLayer, TransformerDecoder, TransformerDecoderLayer
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+gpus = (0, 1)
+
+device = torch.device(f"cuda:{min(gpus)}" if len(gpus) > 0 else "cpu")
 # device = torch.device("cpu")
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 
