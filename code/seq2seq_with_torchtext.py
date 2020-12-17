@@ -13,6 +13,7 @@ import torch.optim as optim
 import torch.nn as nn
 import torch
 import os
+from evaluate import eval_score
 
 print('hello world')
 
@@ -149,7 +150,6 @@ def init_weights(m):
     for name, param in m.named_parameters():
         nn.init.uniform_(param.data, -0.08, 0.08)
 
-from tqdm import tqdm
 
 def train_model(model, iterator, optimizer, criterion, clip):
     model.train()
@@ -252,10 +252,8 @@ def gen_sentence_list(model, path, SRC, TRG):
     for i in col:
         input.append(i[0])
         output.append(i[1].replace("\n", ""))
-    bar = tqdm(total = len(input))
     for sentence in input:
         pred.append(gen_sentence(sentence, SRC, TRG, model))
-        bar.update(1)
     return input, output, pred
 
 
@@ -321,10 +319,9 @@ def main():
     print(model)
     model.apply(init_weights)
 
-    lr = 5
+    lr = 0.1
 
     optimizer = optim.Adam(model.parameters(), lr = lr)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1.0, gamma=0.95)
 
     SRC_PAD_IDX = SRC.vocab.stoi[SRC.pad_token]
 
@@ -353,7 +350,6 @@ def main():
             best_model = model
             #torch.save(model.state_dict(), 'tut1-model.pt')
 
-        scheduler.step()
         print("-"*65)
         print(
             f'Epoch: {epoch+1:02} | Time: {epoch_mins}m {epoch_secs}s | Train Loss: {train_loss:.3f} | Val. Loss: {valid_loss:.3f}')
@@ -380,6 +376,14 @@ def main():
 
     df_s.to_csv(filename)
 
+    df_result = df_s.groupby(["input", "predict"], as_index=False).agg({
+        "answer": list
+    })
+
+    percentage, kinds, bleu = eval_score(df_result)
+    print(f"一致率: {percentage}, 種類数: {kinds}, BLEU: {bleu}")
+    with open("score_seq2seq.txt", mode="w") as f:
+        f.write(f"一致率: {percentage}, 種類数: {kinds}, BLEU: {bleu}")
     print("done!")
 
 

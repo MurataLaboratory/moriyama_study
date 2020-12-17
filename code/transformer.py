@@ -12,6 +12,7 @@ from torchtext import data
 from janome.tokenizer import Tokenizer
 import janome
 import os
+from evaluate import eval_score
 
 
 import math
@@ -348,6 +349,15 @@ def main():
     df_s = pd.concat([train_df, test_df]).sort_values('input')
 
     df_s.to_csv(filename)
+
+    df_result = df_s.groupby(["input", "predict"], as_index=False).agg({
+        "answer": list
+    })
+
+    percentage, kinds, bleu = eval_score(df_result)
+    print(f"一致率: {percentage}, 種類数: {kinds}, BLEU: {bleu}")
+    with open("score_transformer.txt", mode="w") as f:
+        f.write(f"一致率: {percentage}, 種類数: {kinds}, BLEU: {bleu}")
     print("done!")
 
 

@@ -20,6 +20,7 @@ import torch.optim as optim
 import torch.nn as nn
 import torch
 import os
+from evaluate import eval_score
 print('hello world')
 
 
@@ -258,7 +259,7 @@ def convert_list_to_df(input, output, pred_list):
         output_str = output[i]
         batch_pred = pred_list[i]
         predict = [j for j in batch_pred if j != "<pad>" and j !=
-                   "<sos>" and j != "<eos>" and j != "<unk>" and j != "[unk]"]
+                   "<sos>" and j != "<eos>" and j != "[CLS]" and j != "[unk]"]
         predict_str = "".join(predict).replace("#", "")
         row.append([input_str, output_str, predict_str])
     df = pd.DataFrame(row, columns=["input", "answer", "predict"])
@@ -307,7 +308,7 @@ def main():
     DEC_EMB_DIM = 768
     ENC_HID_DIM = 1024
     DEC_HID_DIM = 1024
-    N_LAYERS = 3
+    N_LAYERS = 2
     ENC_DROPOUT = 0.3
     DEC_DROPOUT = 0.3
 
@@ -376,6 +377,14 @@ def main():
     df_s = df_s.sort_values("input")
 
     df_s.to_csv("../csv/result_bert_embedded_seq2seq.csv")
+    df_result = df_s.groupby(["input", "predict"], as_index=False).agg({
+        "answer": list
+    })
+
+    percentage, kinds, bleu = eval_score(df_result)
+    print(f"一致率: {percentage}, 種類数: {kinds}, BLEU: {bleu}")
+    with open("score_bert_embedded_seq2seq.txt", mode="w") as f:
+        f.write(f"一致率: {percentage}, 種類数: {kinds}, BLEU: {bleu}")
 
     print("done!!!")
 

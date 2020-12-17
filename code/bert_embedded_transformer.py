@@ -12,7 +12,7 @@ from torchtext import datasets
 from transformers import BertJapaneseTokenizer, BertForPreTraining
 import random
 import numpy as np
-
+from evaluate import eval_score
 
 bert_model = BertForPreTraining.from_pretrained(
       "cl-tohoku/bert-base-japanese", # 日本語Pre trainedモデルの指定
@@ -368,6 +368,16 @@ def main():
   print(df_s.head(10))
 
   df_s.to_csv("../csv/result_bert_embedded_transformer.csv")
+
+  df_result = df_s.groupby(["input", "predict"], as_index=False).agg({
+        "answer": list
+    })
+
+  percentage, kinds, bleu = eval_score(df_result)
+  print(f"一致率: {percentage}, 種類数: {kinds}, BLEU: {bleu}")
+
+  with open("score_bert_embedded_transformer.txt", mode="w") as f:
+        f.write(f"一致率: {percentage}, 種類数: {kinds}, BLEU: {bleu}")
   print("done!")
 
 if __name__ == "__main__":
