@@ -132,11 +132,13 @@ def choose_dataset(flag, SRC):
 
     return train, val, test, filename
 
+from tqdm import tqdm
 
 def train_model(model, iterator, optimizer, criterion):
     model.train()  # Turn on the train mode
     total_loss = 0.
     start_time = time.time()
+    bar = tqdm(total=len(iterator))
     for _, batch in enumerate(iterator):
         # print(i)
         src = batch.SRC
@@ -153,6 +155,7 @@ def train_model(model, iterator, optimizer, criterion):
         optimizer.step()
 
         total_loss += float(loss.item()) * len(src)
+        bar.update(1)
 
     return total_loss / len(iterator)
 
@@ -232,9 +235,10 @@ def gen_sentence_list(model, path, SRC):
     for i in col:
         input.append(i[0])
         output.append(i[1].replace("\n", ""))
-
+    bar = tqdm(total=len(input))
     for sentence in input:
         pred.append(gen_sentence(sentence, SRC, SRC, model))
+        tqdm.update(1)
     return input, output, pred
 
 
@@ -279,7 +283,7 @@ def main():
     print("building model...")
     ntokens = len(SRC.vocab.stoi)  # the size of vocabulary
     emsize = len(SRC.vocab.stoi)  # embedding dimension
-    nhid = 512  # the dimension of the feedforward network model in nn.TransformerEncoder
+    nhid = 1024  # the dimension of the feedforward network model in nn.TransformerEncoder
     nlayers = 2  # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder
     nhead = 2  # the number of heads in the multiheadattention models
     dropout = 0.3  # the dropout value
@@ -294,7 +298,7 @@ def main():
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1.0, gamma=0.95)
 
     best_val_loss = float("inf")
-    epochs = 50  # The number of epochs
+    epochs = 100  # The number of epochs
     best_model = None
     model.init_weights()
 

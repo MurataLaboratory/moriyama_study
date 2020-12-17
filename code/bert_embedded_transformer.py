@@ -127,12 +127,14 @@ def choose_dataset(flag, SRC, TRG):
   
   return train, val, test, filename
 
+from tqdm import tqdm
 
 import time
 def train(model, data_loader, optimizer, criterion):
     model.train() # Turn on the train mode
     total_loss = 0.
     start_time = time.time()
+    bar = tqdm(total=len(data_loader))
     for src, trg in data_loader:
         src = torch.t(src).to(device)
         trg = torch.t(trg).to(device)
@@ -149,7 +151,7 @@ def train(model, data_loader, optimizer, criterion):
         optimizer.step()
 
         total_loss += loss.item()
-        
+        bar.update(1)
     return total_loss / len(data_loader)
         
 
@@ -223,7 +225,6 @@ def gen_sentence(sentence, tok, model, max_len = 50):
 
   return predict
 
-from tqdm import tqdm
 
 def gen_sentence_list(model, path): 
   col, pred = [], []

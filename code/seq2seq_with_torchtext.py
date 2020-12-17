@@ -145,11 +145,13 @@ def init_weights(m):
     for name, param in m.named_parameters():
         nn.init.uniform_(param.data, -0.08, 0.08)
 
+from tqdm import tqdm
 
 def train_model(model, iterator, optimizer, criterion, clip):
     model.train()
 
     epoch_loss = 0
+    bar = tqdm(total=len(iterator))
 
     for _, batch in enumerate(iterator):
 
@@ -170,6 +172,7 @@ def train_model(model, iterator, optimizer, criterion, clip):
         optimizer.step()
 
         epoch_loss += loss.item()
+        bar.update(1)
 
     return epoch_loss / len(iterator)
 
@@ -236,7 +239,7 @@ def gen_sentence(sentence, src_field, trg_field, model, max_len=50):
             trg_tokens + [src_field.eos_token]
     return trg_tokens
 
-from tqdm import tqdm
+
 
 def gen_sentence_list(model, path, SRC, TRG):
     col, pred = [], []
@@ -304,7 +307,7 @@ def main():
     DEC_EMB_DIM = 512
     ENC_HID_DIM = 1024
     DEC_HID_DIM = 1024
-    N_LAYERS = 3
+    N_LAYERS = 2
     ENC_DROPOUT = 0.3
     DEC_DROPOUT = 0.3
 
@@ -316,13 +319,16 @@ def main():
     print(model)
     model.apply(init_weights)
 
-    optimizer = optim.Adam(model.parameters())
+    lr = 5
+
+    optimizer = optim.Adam(model.parameters(), lr = lr)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1.0, gamma=0.95)
 
     SRC_PAD_IDX = SRC.vocab.stoi[SRC.pad_token]
 
     criterion = nn.CrossEntropyLoss(ignore_index=SRC_PAD_IDX)
 
-    epochs = 150
+    epochs = 100
     clip = 1
     best_model = None
 
@@ -345,6 +351,7 @@ def main():
             best_model = model
             #torch.save(model.state_dict(), 'tut1-model.pt')
 
+        scheduler.step()
         print("-"*65)
         print(
             f'Epoch: {epoch+1:02} | Time: {epoch_mins}m {epoch_secs}s | Train Loss: {train_loss:.3f} | Val. Loss: {valid_loss:.3f}')
@@ -356,12 +363,12 @@ def main():
     print("generating sentence...")
     path = "../data/test.tsv"
     test_input, test_output, test_pred = gen_sentence_list(
-        model, path, SRC, TRG)
+        model, path, SRC, SRC)
     path = "../data/train.tsv"
     train_input, train_output, train_pred = gen_sentence_list(
-        model, path, SRC, TRG)
+        model, path, SRC, SRC)
     path = "../data/val.tsv"
-    val_input, val_output, val_pred = gen_sentence_list(model, path, SRC, TRG)
+    val_input, val_output, val_pred = gen_sentence_list(model, path, SRC, SRC)
 
     train_df = convert_list_to_df(train_input, train_output, train_pred)
     val_df = convert_list_to_df(val_input, val_output, val_pred)

@@ -134,12 +134,13 @@ def init_weights(m):
     for name, param in m.named_parameters():
         nn.init.uniform_(param.data, -0.08, 0.08)
 
+from tqdm import tqdm
 
 def train(model, data_loader, optimizer, criterion, clip):
     model.train()
 
     epoch_loss = 0
-
+    bar = tqdm(total=len(data_loader))
     for src, trg in data_loader:
         src = torch.t(src).to(device)
         trg = torch.t(trg).to(device)
@@ -156,6 +157,7 @@ def train(model, data_loader, optimizer, criterion, clip):
         optimizer.step()
 
         epoch_loss += loss.item()
+        bar.update(1)
 
     return epoch_loss / len(data_loader)
 
@@ -226,7 +228,7 @@ def gen_sentence(sentence, tok, model, max_len=50):
     predit = "".join(predict)
     return predict
 
-from tqdm import tqdm
+
 
 def gen_sentence_list(model, path, tok):
     col, pred = [], []
@@ -236,7 +238,7 @@ def gen_sentence_list(model, path, tok):
             col.append(file_list.split('\t'))
     for i in col:
         input.append(i[0])
-        output.append(i[1])
+        output.append(i[1].replace("\n", ""))
     bar = tqdm(total = len(input))
     for sentence in input:
         pred.append(gen_sentence(sentence, tok, model))
@@ -347,7 +349,6 @@ def main():
 
     torch.save(best_model.state_dict(),
                '../model/bert_embedded_seq2seq.pth')
-
     model.apply(init_weights)
     model.state_dict(torch.load("../model/bert_embedded_seq2seq.pth"))
 
