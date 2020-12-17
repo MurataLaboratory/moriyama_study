@@ -20,9 +20,14 @@ bert_model = BertForPreTraining.from_pretrained(
       output_attentions = False, # アテンションベクトルを出力するか
       output_hidden_states = True, # 隠れ層を出力するか
   )
-gpus = (0, 1)
 
-device = torch.device(f"cuda:{min(gpus)}" if len(gpus) > 0 else "cpu")
+def get_freer_gpu():
+    os.system('nvidia-smi -q -d Memory |grep -A4 GPU|grep Free >tmp')
+    memory_available = [int(x.split()[2]) for x in open('tmp', 'r').readlines()]
+    return np.argmax(memory_available)
+
+# 必要なモジュールのインポート
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu", index=get_freer_gpu())
 
 class TransformerModel(nn.Module):
 
@@ -134,7 +139,6 @@ def train(model, data_loader, optimizer, criterion):
     model.train() # Turn on the train mode
     total_loss = 0.
     start_time = time.time()
-    bar = tqdm(total=len(data_loader))
     for src, trg in data_loader:
         src = torch.t(src).to(device)
         trg = torch.t(trg).to(device)
@@ -151,7 +155,7 @@ def train(model, data_loader, optimizer, criterion):
         optimizer.step()
 
         total_loss += loss.item()
-        bar.update(1)
+        
     return total_loss / len(data_loader)
         
 

@@ -19,11 +19,17 @@ from torchtext.data import Field, BucketIterator
 import torch.optim as optim
 import torch.nn as nn
 import torch
+import os
 print('hello world')
 
-gpus = (0, 1)
 
-device = torch.device(f"cuda:{min(gpus)}" if len(gpus) > 0 else "cpu")
+def get_freer_gpu():
+    os.system('nvidia-smi -q -d Memory |grep -A4 GPU|grep Free >tmp')
+    memory_available = [int(x.split()[2]) for x in open('tmp', 'r').readlines()]
+    return np.argmax(memory_available)
+
+# 必要なモジュールのインポート
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu", index=get_freer_gpu())
 # device = torch.device("cpu")
 
 bert_model = BertForPreTraining.from_pretrained(
@@ -140,7 +146,6 @@ def train(model, data_loader, optimizer, criterion, clip):
     model.train()
 
     epoch_loss = 0
-    bar = tqdm(total=len(data_loader))
     for src, trg in data_loader:
         src = torch.t(src).to(device)
         trg = torch.t(trg).to(device)
@@ -157,7 +162,6 @@ def train(model, data_loader, optimizer, criterion, clip):
         optimizer.step()
 
         epoch_loss += loss.item()
-        bar.update(1)
 
     return epoch_loss / len(data_loader)
 

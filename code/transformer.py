@@ -20,9 +20,14 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import TransformerEncoder, TransformerEncoderLayer, TransformerDecoder, TransformerDecoderLayer
 
-gpus = (0, 1)
 
-device = torch.device(f"cuda:{min(gpus)}" if len(gpus) > 0 else "cpu")
+def get_freer_gpu():
+    os.system('nvidia-smi -q -d Memory |grep -A4 GPU|grep Free >tmp')
+    memory_available = [int(x.split()[2]) for x in open('tmp', 'r').readlines()]
+    return np.argmax(memory_available)
+
+# 必要なモジュールのインポート
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu", index=get_freer_gpu())
 # device = torch.device("cpu")
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 
@@ -138,7 +143,6 @@ def train_model(model, iterator, optimizer, criterion):
     model.train()  # Turn on the train mode
     total_loss = 0.
     start_time = time.time()
-    bar = tqdm(total=len(iterator))
     for _, batch in enumerate(iterator):
         # print(i)
         src = batch.SRC
@@ -155,7 +159,6 @@ def train_model(model, iterator, optimizer, criterion):
         optimizer.step()
 
         total_loss += float(loss.item()) * len(src)
-        bar.update(1)
 
     return total_loss / len(iterator)
 
@@ -238,7 +241,7 @@ def gen_sentence_list(model, path, SRC):
     bar = tqdm(total=len(input))
     for sentence in input:
         pred.append(gen_sentence(sentence, SRC, SRC, model))
-        tqdm.update(1)
+        bar.update(1)
     return input, output, pred
 
 
