@@ -169,6 +169,7 @@ def train(model, data_loader, optimizer, criterion, clip):
     for src, trg in data_loader:
         src = torch.t(src).to(device)
         trg = torch.t(trg).to(device)
+        src = torch.flip(src, [0, 1])
         optimizer.zero_grad()
 
         output = model(src, trg)
@@ -197,6 +198,7 @@ def evaluate(model, data_loader, criterion):
 
             src = torch.t(src).to(device)
             trg = torch.t(trg).to(device)
+            src = torch.flip(src, [0, 1])
             output = model(src, trg)
 
             output_dim = output.shape[-1]

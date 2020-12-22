@@ -200,6 +200,7 @@ def evaluate_model(model, iterator, criterion):
 
             src = batch.SRC
             trg = batch.TRG
+            src = torch.flip(src, [0, 1])
 
             output = model(src, trg)
 
