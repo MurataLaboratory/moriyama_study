@@ -322,15 +322,13 @@ def main():
     print(model)
     model.apply(init_weights)
 
-    lr = 0.1
-
-    optimizer = optim.Adam(model.parameters(), lr = lr)
+    optimizer = optim.Adam(model.parameters())
 
     SRC_PAD_IDX = SRC.vocab.stoi[SRC.pad_token]
 
     criterion = nn.CrossEntropyLoss(ignore_index=SRC_PAD_IDX)
 
-    epochs = 100
+    epochs = 200
     clip = 1
     best_model = None
 
@@ -359,17 +357,17 @@ def main():
 
     torch.save(best_model.state_dict(), '../model/seq2seq.pth')
 
-    model.state_dict(torch.load("../model/seq2seq.pth"))
+    # model.state_dict(torch.load("../model/seq2seq.pth"))
 
     print("generating sentence...")
     path = "../data/test.tsv"
     test_input, test_output, test_pred = gen_sentence_list(
-        model, path, SRC, SRC)
+        best_model, path, SRC, SRC)
     path = "../data/train.tsv"
     train_input, train_output, train_pred = gen_sentence_list(
-        model, path, SRC, SRC)
+        best_model, path, SRC, SRC)
     path = "../data/val.tsv"
-    val_input, val_output, val_pred = gen_sentence_list(model, path, SRC, SRC)
+    val_input, val_output, val_pred = gen_sentence_list(best_model, path, SRC, SRC)
 
     train_df = convert_list_to_df(train_input, train_output, train_pred)
     val_df = convert_list_to_df(val_input, val_output, val_pred)

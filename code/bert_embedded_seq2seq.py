@@ -331,7 +331,7 @@ def main():
     best_model = None
 
     print("training...")
-
+    """
     for epoch in range(epochs):
 
         start_time = time.time()
@@ -355,19 +355,21 @@ def main():
     torch.save(best_model.state_dict(),
                '../model/bert_embedded_seq2seq.pth')
     model.apply(init_weights)
+    """
     model.state_dict(torch.load("../model/bert_embedded_seq2seq.pth"))
 
     print("generating sentences...")
     path = "../data/test.tsv"
     test_input, test_output, test_pred = gen_sentence_list(
         model, path, tok)
-
+    print(test_pred)
+    """
     path = "../data/train.tsv"
     train_input, train_output, train_pred = gen_sentence_list(
-        model, path, tok)
+        best_model, path, tok)
 
     path = "../data/val.tsv"
-    val_input, val_output, val_pred = gen_sentence_list(model, path, tok)
+    val_input, val_output, val_pred = gen_sentence_list(best_model, path, tok)
 
     train_df = convert_list_to_df(train_input, train_output, train_pred)
     val_df = convert_list_to_df(val_input, val_output, val_pred)
@@ -387,7 +389,7 @@ def main():
         f.write(f"一致率: {percentage}, 種類数: {kinds}, BLEU: {bleu}")
 
     print("done!!!")
-
+    """
 
 if __name__ == "__main__":
     main()
