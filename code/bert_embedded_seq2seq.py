@@ -97,11 +97,26 @@ class Decoder(nn.Module):
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, input, hidden, cell):
+        # print(type(input))
         input = input.unsqueeze(0)
+        # print(input.size())
         embedded = self.dropout(self.embedding(input))
+        # print(embedded.size())
         output, (hidden, cell) = self.rnn(embedded, (hidden, cell))
-        # print(output.squeeze(0).size())
+        # print(output.squeeze(1).size())
         prediction = self.fc_out(output.squeeze(0))
+
+        return prediction, hidden, cell
+
+    def gen_prediction(self, input, hidden, cell):
+        # print(type(input))
+        # input = input.unsqueeze(0)
+        # print(input.size())
+        embedded = self.embedding(input)
+        # print(embedded.size())
+        output, (hidden, cell) = self.rnn(embedded, (hidden, cell))
+        # print(output.squeeze(1).size())
+        prediction = self.fc_out(output.squeeze(1))
 
         return prediction, hidden, cell
 
@@ -127,12 +142,16 @@ class Seq2Seq(nn.Module):
         # print(input)
 
         for t in range(1, trg_len):
+            # output = output.unsqueeze(0)
+            # print(output)
+            # print(output.size())
             output, hidden, cell = self.decoder(output, hidden, cell)
 
             outputs[t] = output
             teacher_force = random.random() < teacher_forcing_ratio
             top1 = output.argmax(1)
             output = (trg[t] if teacher_force else top1)
+            # print(output)
 
         return outputs
 
@@ -155,8 +174,8 @@ def train(model, data_loader, optimizer, criterion, clip):
         output = model(src, trg)
 
         output_dim = output.shape[-1]
-        output = output[:].view(-1, output_dim)
-        trg = trg[:].contiguous().view(-1)
+        output = output.view(-1, output_dim)
+        trg = trg.contiguous().view(-1)
         loss = criterion(output, trg)
         loss.backward()
         torch.nn.utils.clip_grad_norm(model.parameters(), clip)
@@ -208,23 +227,31 @@ def gen_sentence(sentence, tok, model, max_len=50):
     src = torch.t(src)
     src_tensor = src.to(device)
     # print(src)
+    # print(src.size())
     # src_tensor = model.encoder(src)
     with torch.no_grad():
         hidden, cell = model.encoder(src_tensor)
 
     trg_index = [tok.convert_tokens_to_ids("[CLS]")]
     for i in range(max_len):
-        trg_tensor = torch.LongTensor([trg_index[-1]]).to(device)
+        # print(trg_index)
+        trg_tensor = torch.LongTensor([trg_index]).to(device)
+        trg_tensor = torch.t(trg_tensor)
+        # print(trg_tensor.size())
+        # print(trg_tensor)
         with torch.no_grad():
-            output, hidden, cell = model.decoder(trg_tensor, hidden, cell)
+            output, hidden, cell = model.decoder.gen_prediction(trg_tensor, hidden, cell)
 
-        pred_token = output.argmax(1).item()
+        # print(output.size())
+        # print(output)
+        # print(output[-1].argmax(0).item())
+        pred_token = output[-1].argmax(0).item()
         trg_index.append(pred_token)
-        if pred_token == 3:
+        if pred_token == tok.convert_tokens_to_ids("[SEP]"):
             break
 
     if len(trg_index) == 2:
-        print(trg_index)
+        # print(trg_index)
         trg_index = ["-"]
         trg_index = [tok.convert_tokens_to_ids(
             "[CLS]")] + trg_index + [tok.convert_tokens_to_ids("[SEP]")]
@@ -308,7 +335,7 @@ def main():
     DEC_EMB_DIM = 768
     ENC_HID_DIM = 1024
     DEC_HID_DIM = 1024
-    N_LAYERS = 2
+    N_LAYERS = 3
     ENC_DROPOUT = 0.3
     DEC_DROPOUT = 0.3
 
@@ -319,19 +346,19 @@ def main():
 
     model = Seq2Seq(enc, dec, device).to(device)
 
+    print(model)
     model.apply(init_weights)
 
     optimizer = optim.Adam(model.parameters())
 
     criterion = nn.CrossEntropyLoss(ignore_index=0)
 
-    epochs = 100
+    epochs = 50
     clip = 1
     best_valid_loss = float('inf')
     best_model = None
 
     print("training...")
-    """
     for epoch in range(epochs):
 
         start_time = time.time()
@@ -355,15 +382,15 @@ def main():
     torch.save(best_model.state_dict(),
                '../model/bert_embedded_seq2seq.pth')
     model.apply(init_weights)
-    """
+
     model.state_dict(torch.load("../model/bert_embedded_seq2seq.pth"))
 
     print("generating sentences...")
     path = "../data/test.tsv"
     test_input, test_output, test_pred = gen_sentence_list(
-        model, path, tok)
+        best_model, path, tok)
     print(test_pred)
-    """
+
     path = "../data/train.tsv"
     train_input, train_output, train_pred = gen_sentence_list(
         best_model, path, tok)
@@ -389,7 +416,7 @@ def main():
         f.write(f"一致率: {percentage}, 種類数: {kinds}, BLEU: {bleu}")
 
     print("done!!!")
-    """
+
 
 if __name__ == "__main__":
     main()

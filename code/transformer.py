@@ -181,7 +181,7 @@ def evaluate_model(eval_model, data_source, criterion):
 
 def gen_sentence(sentence, src_field, trg_field, model, max_len = 50):
     model.eval()
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     tokens = [src_field.init_token] + \
         tokenizer(sentence) + [src_field.eos_token]
@@ -193,11 +193,10 @@ def gen_sentence(sentence, src_field, trg_field, model, max_len = 50):
 
     src_tensor = model.encoder(src)
     src_tensor = model.pos_encoder(src_tensor).to(device)
-    src_mask = model.generate_square_subsequent_mask(
-        src_tensor.size()[0]).to(device)
+    # src_mask = model.generate_square_subsequent_mask(src_tensor.size()[0]).to(device)
     # print(src_tensor)
     with torch.no_grad():
-        src_output = model.transformer_encoder(src_tensor, src_mask)
+        src_output = model.transformer_encoder(src_tensor)
 
     trg = trg_field.vocab.stoi[trg_field.eos_token]
     trg = torch.LongTensor([[trg]]).to(device)
@@ -205,17 +204,16 @@ def gen_sentence(sentence, src_field, trg_field, model, max_len = 50):
     # print("src sizse: ", src_output.size())
     for i in range(max_len):
         # print("trg size: ", trg.size())
+        # print([trg_field.vocab.itos[i] for i in trg])
         trg_tensor = model.encoder(trg)
         # print(trg_tensor.size())
         trg_tensor = model.pos_encoder(trg_tensor).to(device)
-        trg_mask = model.generate_square_subsequent_mask(
-            trg_tensor.size()[0]).to(device)
+        # trg_mask = model.generate_square_subsequent_mask(trg_tensor.size()[0]).to(device)
         with torch.no_grad():
-            pred = model.transformer_decoder(trg_tensor, src_output, trg_mask)
+            pred = model.transformer_decoder(trg_tensor, src_output)
         # print("predicit sizes: ", pred.size())
         pred_word_index = pred.argmax(2)[-1]
         # add_word = trg_field.vocab.itos[pred_word_index.item()]
-        # print(tok.convert_ids_to_tokens(pred_word_index))
         output.append(pred_word_index)
         if pred_word_index == trg_field.vocab.stoi[trg_field.eos_token]:
             break
@@ -287,8 +285,8 @@ def main():
     print("building model...")
     ntokens = len(SRC.vocab.stoi)  # the size of vocabulary
     emsize = len(SRC.vocab.stoi)  # embedding dimension
-    nhid = 1024  # the dimension of the feedforward network model in nn.TransformerEncoder
-    nlayers = 2  # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder
+    nhid = 1024  # the dimension of the feedforward network model in nn.TransformerEncoder and nn.TransformerDecoder
+    nlayers = 4  # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder and nn.TransformerDecoder
     nhead = 2  # the number of heads in the multiheadattention models
     dropout = 0.3  # the dropout value
     model = TransformerModel(ntokens, emsize, nhead,
@@ -312,8 +310,8 @@ def main():
         t_loss = train_model(model, train_iter, optimizer, criterion)
         val_loss = evaluate_model(model, val_iter, criterion)
         print('-' * 89)
-        print('| epoch {:3d} | time: {:5.2f}s | valid loss {:5.2f} | '
-              .format(epoch, (time.time() - epoch_start_time), val_loss))
+        print('| epoch {:3d} | time: {:5.2f}s | train loss {:5.2f} | valid loss {:5.2f} | '
+              .format(epoch, (time.time() - epoch_start_time), t_loss, val_loss))
 
         if val_loss < best_val_loss:
             best_val_loss = val_loss
@@ -326,15 +324,16 @@ def main():
     print('| End of training | test loss {:5.2f} | test ppl {:8.2f}'.format(
         test_loss, math.exp(test_loss)))
     print('=' * 89)
-
     torch.save(best_model.state_dict(), "../model/transformer.pth")
-    model.state_dict(torch.load("../model/transformer.pth"))
+
+    model.state_dict(torch.load("../model/transformer.pth", map_location=device))
 
     # 中間発表時にはテストデータは用いない
     print("generating sentence from text..")
     path = "../data/test.tsv"
     test_input, test_output, test_pred = [], [], []
     test_input, test_output, test_pred = gen_sentence_list(model, path, SRC)
+
     path = "../data/train.tsv"
     train_input, train_output, train_pred = [], [], []
     train_input, train_output, train_pred = gen_sentence_list(model, path, SRC)

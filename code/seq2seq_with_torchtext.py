@@ -115,6 +115,15 @@ class Decoder(nn.Module):
 
         return prediction, hidden, cell
 
+    def gen_prediction(self, input, hidden, cell):
+        embedded = self.embedding(input)
+        # print(embedded.size())
+        output, (hidden, cell) = self.rnn(embedded, (hidden, cell))
+        # print(output.squeeze(1).size())
+        prediction = self.fc_out(output.squeeze(1))
+
+        return prediction, hidden, cell
+
 
 class Seq2Seq(nn.Module):
     def __init__(self, encoder, decoder, device):
@@ -160,6 +169,7 @@ def train_model(model, iterator, optimizer, criterion, clip):
 
         src = batch.SRC
         trg = batch.TRG
+        src = torch.flip(src, [0, 1])
         optimizer.zero_grad()
 
         output = model(src, trg)
@@ -224,11 +234,13 @@ def gen_sentence(sentence, src_field, trg_field, model, max_len=50):
 
     trg_index = [trg_field.vocab.stoi[trg_field.init_token]]
     for i in range(max_len):
-        trg_tensor = torch.LongTensor([trg_index[-1]]).to(device)
+        trg_tensor = torch.LongTensor([trg_index]).to(device)
+        trg_tensor = torch.t(trg_tensor)
+        trg_tensor = torch.flip(trg_tensor, [0, 1])
         with torch.no_grad():
-            output, hidden, cell = model.decoder(trg_tensor, hidden, cell)
+            output, hidden, cell = model.decoder.gen_prediction(trg_tensor, hidden, cell)
 
-        pred_token = output.argmax(1).item()
+        pred_token = output[-1].argmax(0).item()
         trg_index.append(pred_token)
         if pred_token == trg_field.vocab.stoi[trg_field.eos_token]:
             break
@@ -252,7 +264,7 @@ def gen_sentence_list(model, path, SRC, TRG):
     for i in col:
         input.append(i[0])
         output.append(i[1].replace("\n", ""))
-    
+
     bar = tqdm(total=len(input))
     for sentence in input:
         pred.append(gen_sentence(sentence, SRC, TRG, model))
@@ -310,7 +322,7 @@ def main():
     DEC_EMB_DIM = 512
     ENC_HID_DIM = 1024
     DEC_HID_DIM = 1024
-    N_LAYERS = 2
+    N_LAYERS = 4
     ENC_DROPOUT = 0.3
     DEC_DROPOUT = 0.3
 
@@ -322,13 +334,13 @@ def main():
     print(model)
     model.apply(init_weights)
 
-    optimizer = optim.Adam(model.parameters())
+    optimizer = optim.Adam(model.parameters(), lr=0.7)
 
     SRC_PAD_IDX = SRC.vocab.stoi[SRC.pad_token]
 
     criterion = nn.CrossEntropyLoss(ignore_index=SRC_PAD_IDX)
 
-    epochs = 200
+    epochs = 100
     clip = 1
     best_model = None
 

@@ -8,7 +8,7 @@ with open(path, mode="r", encoding="utf-8") as f:
     for file_list in f:
         data.append(file_list)
 
-train_size = int(len(data) * 0.8)
+train_size = int(len(data) * 0.7)
 test_size = len(data) - train_size
 
 train, test = train_test_split(data, train_size = train_size, test_size = test_size)

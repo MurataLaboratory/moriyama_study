@@ -28,6 +28,7 @@ def get_freer_gpu():
 
 # 必要なモジュールのインポート
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu", index=get_freer_gpu())
+# device = torch.device("cpu")
 
 class TransformerModel(nn.Module):
 
@@ -108,30 +109,6 @@ tok = BertJapaneseTokenizer.from_pretrained('cl-tohoku/bert-base-japanese')
 def tokenizer(text):
   return tok.tokenize(text)
 
-# 重複のないデータセットか重複のあるデータセットを選ぶ
-# flagがTrueの時重複のないデータを返す
-def choose_dataset(flag, SRC, TRG):
-  if flag:
-    train, val, test = data.TabularDataset.splits(
-        path="../data/", 
-        train='one_train.tsv',
-        validation='one_val.tsv', 
-        test='one_test.tsv', 
-        format='tsv',
-        fields=[('src', SRC), ('trg', TRG)])
-    filename = "../csv/one_result_transformer.csv"
-  else:
-    train, val, test = data.TabularDataset.splits(
-        path="../data/", 
-        train='train.tsv',
-        validation='val.tsv', 
-        test='test.tsv', 
-        format='tsv',
-        fields=[('src', SRC), ('trg', TRG)])
-    filename = "../csv/result_transformer.csv"
-  
-  return train, val, test, filename
-
 from tqdm import tqdm
 
 import time
@@ -155,9 +132,9 @@ def train(model, data_loader, optimizer, criterion):
         optimizer.step()
 
         total_loss += loss.item()
-        
+
     return total_loss / len(data_loader)
-        
+
 
 def evaluate(eval_model, data_loader, criterion):
     eval_model.eval() # Turn on the evaluation mode
@@ -206,6 +183,7 @@ def gen_sentence(sentence, tok, model, max_len = 50):
   # print("src sizse: ", src_output.size())
   for i in range(max_len):
     # print("trg size: ", trg.size())
+    print(tok.convert_ids_to_tokens(trg))
     trg_tensor = model.encoder(trg)
     # print(trg_tensor.size())
     trg_tensor = model.pos_encoder(trg_tensor).to(device)
@@ -274,7 +252,7 @@ def main():
   torch.manual_seed(SEED)
   torch.cuda.manual_seed(SEED)
   torch.backends.cudnn.deterministic = True
-  
+
 
   print("preparing data..")
   path = "../data/data.tsv"
@@ -302,11 +280,11 @@ def main():
   batch_size = 32
   train_data_loader = torch.utils.data.DataLoader(train_data, batch_size, shuffle=True)
   valid_data_loader = torch.utils.data.DataLoader(valid_data, batch_size, shuffle=True)
-  
+
   print("building model...")
   emsize = 768 # embedding dimension
-  nhid = 512 # the dimension of the feedforward network model in nn.TransformerEncoder
-  nlayers = 2 # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder
+  nhid = 1024 # the dimension of the feedforward network model in nn.TransformerEncoder
+  nlayers = 4 # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder
   nhead = 2 # the number of heads in the multiheadattention models
   dropout = 0.3 # the dropout value
   model = TransformerModel( emsize, nhead, nhid, nlayers, dropout).to(device)
@@ -345,18 +323,19 @@ def main():
   torch.save(best_model.state_dict(), "../model/bert_embedded_transformer.pth")
 
   model.init_weights()
+
   model.state_dict(torch.load("../model/bert_embedded_transformer.pth"))
 
   print("generating sentence from text..")
   path = "../data/test.tsv"
   test_input, test_output, test_pred = [], [], []
-  test_input, test_output, test_pred = gen_sentence_list(model, path)
+  test_input, test_output, test_pred = gen_sentence_list(best_model, path)
   path = "../data/train.tsv"
   train_input, train_output, train_pred = [], [], []
-  train_input, train_output, train_pred = gen_sentence_list(model, path)
+  train_input, train_output, train_pred = gen_sentence_list(best_model, path)
   path = "../data/val.tsv"
   val_input, val_output, val_pred = [], [], []
-  val_input, val_output, val_pred = gen_sentence_list(model, path)
+  val_input, val_output, val_pred = gen_sentence_list(best_model, path)
 
   print("converting list to dataframe")
   train_df = convert_list_to_df(train_input, train_output, train_pred)
