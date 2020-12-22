@@ -6,6 +6,7 @@
 # [Visualizing Bert Embeddings](https://krishansubudhi.github.io/deeplearning/2020/08/27/bert-embeddings-visualization.html)
 
 
+from tqdm import tqdm
 from transformers import BertJapaneseTokenizer, BertForPreTraining
 import pandas as pd
 from torchtext import datasets
@@ -26,11 +27,14 @@ print('hello world')
 
 def get_freer_gpu():
     os.system('nvidia-smi -q -d Memory |grep -A4 GPU|grep Free >tmp')
-    memory_available = [int(x.split()[2]) for x in open('tmp', 'r').readlines()]
+    memory_available = [int(x.split()[2])
+                        for x in open('tmp', 'r').readlines()]
     return np.argmax(memory_available)
 
+
 # 必要なモジュールのインポート
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu", index=get_freer_gpu())
+device = torch.device("cuda" if torch.cuda.is_available()
+                      else "cpu", index=get_freer_gpu())
 # device = torch.device("cpu")
 
 bert_model = BertForPreTraining.from_pretrained(
@@ -160,7 +164,6 @@ def init_weights(m):
     for name, param in m.named_parameters():
         nn.init.uniform_(param.data, -0.08, 0.08)
 
-from tqdm import tqdm
 
 def train(model, data_loader, optimizer, criterion, clip):
     model.train()
@@ -169,7 +172,10 @@ def train(model, data_loader, optimizer, criterion, clip):
     for src, trg in data_loader:
         src = torch.t(src).to(device)
         trg = torch.t(trg).to(device)
-        src = torch.flip(src, [0, 1])
+        src = src.to('cpu').detach().numpy().copy()
+        src = np.flipud(src)
+        src = torch.from_numpy(src.astype(np.int32)).clone()
+        src = src.long().to(device)
         optimizer.zero_grad()
 
         output = model(src, trg)
@@ -198,7 +204,10 @@ def evaluate(model, data_loader, criterion):
 
             src = torch.t(src).to(device)
             trg = torch.t(trg).to(device)
-            src = torch.flip(src, [0, 1])
+            src = src.to('cpu').detach().numpy().copy()
+            src = np.flipud(src)
+            src = torch.from_numpy(src.astype(np.int32)).clone()
+            src = src.long().to(device)
             output = model(src, trg)
 
             output_dim = output.shape[-1]
@@ -217,6 +226,7 @@ def epoch_time(start_time, end_time):
     elapsed_mins = int(elapsed_time / 60)
     elapsed_secs = int(elapsed_time - (elapsed_mins*60))
     return elapsed_mins, elapsed_secs
+
 
 def gen_sentence(sentence, tok, model, max_len=50):
     model.eval()
@@ -242,7 +252,8 @@ def gen_sentence(sentence, tok, model, max_len=50):
         # print(trg_tensor.size())
         # print(trg_tensor)
         with torch.no_grad():
-            output, hidden, cell = model.decoder.gen_prediction(trg_tensor, hidden, cell)
+            output, hidden, cell = model.decoder.gen_prediction(
+                trg_tensor, hidden, cell)
 
         # print(output.size())
         # print(output)
@@ -263,7 +274,6 @@ def gen_sentence(sentence, tok, model, max_len=50):
     return predict
 
 
-
 def gen_sentence_list(model, path, tok):
     col, pred = [], []
     input, output = [], []
@@ -273,7 +283,7 @@ def gen_sentence_list(model, path, tok):
     for i in col:
         input.append(i[0])
         output.append(i[1].replace("\n", ""))
-    bar = tqdm(total = len(input))
+    bar = tqdm(total=len(input))
     for sentence in input:
         pred.append(gen_sentence(sentence, tok, model))
         bar.update(1)

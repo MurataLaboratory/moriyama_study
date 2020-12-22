@@ -1,3 +1,4 @@
+from tqdm import tqdm
 import torchtext
 import pandas as pd
 from torchtext import datasets
@@ -17,13 +18,17 @@ from evaluate import eval_score
 
 print('hello world')
 
+
 def get_freer_gpu():
     os.system('nvidia-smi -q -d Memory |grep -A4 GPU|grep Free >tmp')
-    memory_available = [int(x.split()[2]) for x in open('tmp', 'r').readlines()]
+    memory_available = [int(x.split()[2])
+                        for x in open('tmp', 'r').readlines()]
     return np.argmax(memory_available)
 
+
 # 必要なモジュールのインポート
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu", index=get_freer_gpu())
+device = torch.device("cuda" if torch.cuda.is_available()
+                      else "cpu", index=get_freer_gpu())
 
 SEED = 1234
 
@@ -169,7 +174,11 @@ def train_model(model, iterator, optimizer, criterion, clip):
 
         src = batch.SRC
         trg = batch.TRG
-        src = torch.flip(src, [0, 1])
+        # src = torch.flip(src, [0, 1])
+        src = src.to('cpu').detach().numpy().copy()
+        src = np.flipud(src)
+        src = torch.from_numpy(src.astype(np.int32)).clone()
+        src = src.long().to(device)
         optimizer.zero_grad()
 
         output = model(src, trg)
@@ -200,7 +209,10 @@ def evaluate_model(model, iterator, criterion):
 
             src = batch.SRC
             trg = batch.TRG
-            src = torch.flip(src, [0, 1])
+            src = src.to('cpu').detach().numpy().copy()
+            src = np.flipud(src)
+            src = torch.from_numpy(src.astype(np.int32)).clone()
+            src = src.long().to(device)
 
             output = model(src, trg)
 
@@ -230,6 +242,7 @@ def gen_sentence(sentence, src_field, trg_field, model, max_len=50):
 
     src_index = [src_field.vocab.stoi[i] for i in tokens]
     src_tensor = torch.LongTensor(src_index).unsqueeze(1).to(device)
+    src_tensor = torch.flip(src_tensor, [0, 1])
     with torch.no_grad():
         hidden, cell = model.encoder(src_tensor)
 
@@ -237,9 +250,9 @@ def gen_sentence(sentence, src_field, trg_field, model, max_len=50):
     for i in range(max_len):
         trg_tensor = torch.LongTensor([trg_index]).to(device)
         trg_tensor = torch.t(trg_tensor)
-        trg_tensor = torch.flip(trg_tensor, [0, 1])
         with torch.no_grad():
-            output, hidden, cell = model.decoder.gen_prediction(trg_tensor, hidden, cell)
+            output, hidden, cell = model.decoder.gen_prediction(
+                trg_tensor, hidden, cell)
 
         pred_token = output[-1].argmax(0).item()
         trg_index.append(pred_token)
@@ -254,7 +267,6 @@ def gen_sentence(sentence, src_field, trg_field, model, max_len=50):
             trg_tokens + [src_field.eos_token]
     return trg_tokens
 
-from tqdm import tqdm
 
 def gen_sentence_list(model, path, SRC, TRG):
     col, pred = [], []
@@ -380,7 +392,8 @@ def main():
     train_input, train_output, train_pred = gen_sentence_list(
         best_model, path, SRC, SRC)
     path = "../data/val.tsv"
-    val_input, val_output, val_pred = gen_sentence_list(best_model, path, SRC, SRC)
+    val_input, val_output, val_pred = gen_sentence_list(
+        best_model, path, SRC, SRC)
 
     train_df = convert_list_to_df(train_input, train_output, train_pred)
     val_df = convert_list_to_df(val_input, val_output, val_pred)
