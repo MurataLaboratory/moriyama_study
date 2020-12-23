@@ -333,8 +333,8 @@ def main():
     OUTPUT_DIM = len(TRG.vocab)
     ENC_EMB_DIM = 512
     DEC_EMB_DIM = 512
-    ENC_HID_DIM = 1024
-    DEC_HID_DIM = 1024
+    ENC_HID_DIM = 256
+    DEC_HID_DIM = 256
     N_LAYERS = 4
     ENC_DROPOUT = 0.3
     DEC_DROPOUT = 0.3
@@ -347,7 +347,7 @@ def main():
     print(model)
     model.apply(init_weights)
 
-    optimizer = optim.Adam(model.parameters(), lr=0.7)
+    optimizer = optim.Adam(model.parameters(), lr=0.0001)
 
     SRC_PAD_IDX = SRC.vocab.stoi[SRC.pad_token]
 
@@ -374,7 +374,7 @@ def main():
         if valid_loss < best_valid_loss:
             best_valid_loss = valid_loss
             best_model = model
-            #torch.save(model.state_dict(), 'tut1-model.pt')
+            # torch.save(model.state_dict(), 'tut1-model.pt')
 
         print("-"*65)
         print(
@@ -383,17 +383,17 @@ def main():
     torch.save(best_model.state_dict(), '../model/seq2seq.pth')
 
     # model.state_dict(torch.load("../model/seq2seq.pth"))
-
+    print(model.state_dict())
     print("generating sentence...")
     path = "../data/test.tsv"
     test_input, test_output, test_pred = gen_sentence_list(
-        best_model, path, SRC, SRC)
+        model, path, SRC, SRC)
     path = "../data/train.tsv"
     train_input, train_output, train_pred = gen_sentence_list(
-        best_model, path, SRC, SRC)
+        model, path, SRC, SRC)
     path = "../data/val.tsv"
     val_input, val_output, val_pred = gen_sentence_list(
-        best_model, path, SRC, SRC)
+        model, path, SRC, SRC)
 
     train_df = convert_list_to_df(train_input, train_output, train_pred)
     val_df = convert_list_to_df(val_input, val_output, val_pred)

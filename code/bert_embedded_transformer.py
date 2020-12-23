@@ -308,12 +308,12 @@ def main():
       t_loss = train(model, train_data_loader, optimizer, criterion)
       val_loss = evaluate(model, valid_data_loader, criterion)
       print('-' * 89)
-      print('| epoch {:3d} | time: {:5.2f}s | train loss {:5.2f} | valid loss {:5.2f} | '
-            .format(epoch, (time.time() - epoch_start_time), t_loss, val_loss))
+      print('| epoch {:3d} | time: {:3d}m {:3d}s | train loss {:5.2f} | valid loss {:5.2f} | '
+              .format(epoch, int((time.time() - epoch_start_time)/60), (time.time() - epoch_start_time)%60, t_loss, val_loss))
 
       train_loss_list.append(t_loss)
       eval_loss_list.append(val_loss)
-      
+
       if val_loss < best_val_loss:
           best_val_loss = val_loss
           best_model = model
@@ -322,20 +322,20 @@ def main():
 
   torch.save(best_model.state_dict(), "../model/bert_embedded_transformer.pth")
 
-  model.init_weights()
+  # model.init_weights()
 
-  model.state_dict(torch.load("../model/bert_embedded_transformer.pth"))
+  # model.state_dict(torch.load("../model/bert_embedded_transformer.pth"))
 
   print("generating sentence from text..")
   path = "../data/test.tsv"
   test_input, test_output, test_pred = [], [], []
-  test_input, test_output, test_pred = gen_sentence_list(best_model, path)
+  test_input, test_output, test_pred = gen_sentence_list(model, path)
   path = "../data/train.tsv"
   train_input, train_output, train_pred = [], [], []
-  train_input, train_output, train_pred = gen_sentence_list(best_model, path)
+  train_input, train_output, train_pred = gen_sentence_list(model, path)
   path = "../data/val.tsv"
   val_input, val_output, val_pred = [], [], []
-  val_input, val_output, val_pred = gen_sentence_list(best_model, path)
+  val_input, val_output, val_pred = gen_sentence_list(model, path)
 
   print("converting list to dataframe")
   train_df = convert_list_to_df(train_input, train_output, train_pred)

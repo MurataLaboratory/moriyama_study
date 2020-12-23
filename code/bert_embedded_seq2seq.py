@@ -345,9 +345,9 @@ def main():
     # OUTPUT_DIM = 3454
     ENC_EMB_DIM = 768
     DEC_EMB_DIM = 768
-    ENC_HID_DIM = 1024
-    DEC_HID_DIM = 1024
-    N_LAYERS = 3
+    ENC_HID_DIM = 256
+    DEC_HID_DIM = 256
+    N_LAYERS = 4
     ENC_DROPOUT = 0.3
     DEC_DROPOUT = 0.3
 
@@ -365,7 +365,7 @@ def main():
 
     criterion = nn.CrossEntropyLoss(ignore_index=0)
 
-    epochs = 50
+    epochs = 100
     clip = 1
     best_valid_loss = float('inf')
     best_model = None
@@ -393,22 +393,22 @@ def main():
 
     torch.save(best_model.state_dict(),
                '../model/bert_embedded_seq2seq.pth')
-    model.apply(init_weights)
+    # model.apply(init_weights)
 
-    model.state_dict(torch.load("../model/bert_embedded_seq2seq.pth"))
+    # model.state_dict(torch.load("../model/bert_embedded_seq2seq.pth"))
 
     print("generating sentences...")
     path = "../data/test.tsv"
     test_input, test_output, test_pred = gen_sentence_list(
-        best_model, path, tok)
+        model, path, tok)
     print(test_pred)
 
     path = "../data/train.tsv"
     train_input, train_output, train_pred = gen_sentence_list(
-        best_model, path, tok)
+        model, path, tok)
 
     path = "../data/val.tsv"
-    val_input, val_output, val_pred = gen_sentence_list(best_model, path, tok)
+    val_input, val_output, val_pred = gen_sentence_list(model, path, tok)
 
     train_df = convert_list_to_df(train_input, train_output, train_pred)
     val_df = convert_list_to_df(val_input, val_output, val_pred)

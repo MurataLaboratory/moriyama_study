@@ -148,11 +148,12 @@ def train_model(model, iterator, optimizer, criterion):
         # print(i)
         src = batch.SRC
         trg = batch.TRG
+        # print(src)
         optimizer.zero_grad()
         output = model(src, trg)
-        output = output[:].contiguous().view(-1, output.shape[-1])
+        output = output.contiguous().view(-1, output.shape[-1])
         # print(output)
-        trg = trg[:].contiguous().view(-1)
+        trg = trg.contiguous().view(-1)
         # print(trg)
         loss = criterion(output, trg)
         loss.backward()
@@ -187,9 +188,9 @@ def gen_sentence(sentence, src_field, trg_field, model, max_len = 50):
         tokenizer(sentence) + [src_field.eos_token]
     src = [src_field.vocab.stoi[i] for i in tokens]
     src = torch.LongTensor([src])
-    # print(src)
     src = torch.t(src)
     src = src.to(device)
+    # print(src)
 
     src_tensor = model.encoder(src)
     src_tensor = model.pos_encoder(src_tensor).to(device)
@@ -285,7 +286,7 @@ def main():
     print("building model...")
     ntokens = len(SRC.vocab.stoi)  # the size of vocabulary
     emsize = len(SRC.vocab.stoi)  # embedding dimension
-    nhid = 1024  # the dimension of the feedforward network model in nn.TransformerEncoder and nn.TransformerDecoder
+    nhid = 256  # the dimension of the feedforward network model in nn.TransformerEncoder and nn.TransformerDecoder
     nlayers = 4  # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder and nn.TransformerDecoder
     nhead = 2  # the number of heads in the multiheadattention models
     dropout = 0.3  # the dropout value
@@ -303,15 +304,14 @@ def main():
     epochs = 100  # The number of epochs
     best_model = None
     model.init_weights()
-
     print("training...")
     for epoch in range(1, epochs + 1):
         epoch_start_time = time.time()
         t_loss = train_model(model, train_iter, optimizer, criterion)
         val_loss = evaluate_model(model, val_iter, criterion)
-        print('-' * 89)
-        print('| epoch {:3d} | time: {:5.2f}s | train loss {:5.2f} | valid loss {:5.2f} | '
-              .format(epoch, (time.time() - epoch_start_time), t_loss, val_loss))
+        print('-' * 65)
+        print('| epoch {:3d} | time: {:3d}m {:3d}s | train loss {:5.2f} | valid loss {:5.2f} | '
+              .format(epoch, int((time.time() - epoch_start_time)/60), int((time.time() - epoch_start_time)%60), t_loss, val_loss))
 
         if val_loss < best_val_loss:
             best_val_loss = val_loss
@@ -327,7 +327,7 @@ def main():
     torch.save(best_model.state_dict(), "../model/transformer.pth")
 
     model.state_dict(torch.load("../model/transformer.pth", map_location=device))
-
+    # print(model.state_dict())
     # 中間発表時にはテストデータは用いない
     print("generating sentence from text..")
     path = "../data/test.tsv"
