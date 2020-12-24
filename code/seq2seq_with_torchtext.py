@@ -188,6 +188,8 @@ def train_model(model, iterator, optimizer, criterion, clip):
         output_dim = output.shape[-1]
         output = output[:].view(-1, output_dim)
         trg = trg[:].view(-1)
+        # print("output size", output.size())
+        # print("trg size: ", trg.size())
         loss = criterion(output, trg)
         loss.backward()
         torch.nn.utils.clip_grad_norm(model.parameters(), clip)
@@ -370,30 +372,30 @@ def main():
         end_time = time.time()
 
         epoch_mins, epoch_secs = epoch_time(start_time, end_time)
-
+        """
         if valid_loss < best_valid_loss:
             best_valid_loss = valid_loss
             best_model = model
             # torch.save(model.state_dict(), 'tut1-model.pt')
-
+        """
         print("-"*65)
         print(
             f'Epoch: {epoch+1:02} | Time: {epoch_mins}m {epoch_secs}s | Train Loss: {train_loss:.3f} | Val. Loss: {valid_loss:.3f}')
 
-    torch.save(best_model.state_dict(), '../model/seq2seq.pth')
+    torch.save(model.state_dict(), '../model/seq2seq.pth')
 
     # model.state_dict(torch.load("../model/seq2seq.pth"))
     print(model.state_dict())
     print("generating sentence...")
     path = "../data/test.tsv"
     test_input, test_output, test_pred = gen_sentence_list(
-        model, path, SRC, SRC)
+        model, path, SRC, TRG)
     path = "../data/train.tsv"
     train_input, train_output, train_pred = gen_sentence_list(
-        model, path, SRC, SRC)
+        model, path, SRC, TRG)
     path = "../data/val.tsv"
     val_input, val_output, val_pred = gen_sentence_list(
-        model, path, SRC, SRC)
+        model, path, SRC, TRG)
 
     train_df = convert_list_to_df(train_input, train_output, train_pred)
     val_df = convert_list_to_df(val_input, val_output, val_pred)

@@ -28,8 +28,8 @@ def get_freer_gpu():
     return np.argmax(memory_available)
 
 # 必要なモジュールのインポート
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu", index=get_freer_gpu())
-# device = torch.device("cpu")
+# device = torch.device("cuda" if torch.cuda.is_available() else "cpu", index=get_freer_gpu())
+device = torch.device("cpu")
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 
 
@@ -46,8 +46,9 @@ class TransformerModel(nn.Module):
         self.encoder = nn.Embedding(ntoken, ninp)
         # self.decoder = nn.Embedding(ntoken, ninp)
         self.ninp = ninp
+        self.linear = nn.Linear(ninp, ntoken)
         decoder_layers = TransformerDecoderLayer(ninp, nhead, nhid, dropout)
-        self.transformer_decoder = TransformerDecoder(decoder_layers, nlayers)
+        self.transformer_decoder = TransformerDecoder(decoder_layers, nlayers, norm=self.linear)
 
         self.init_weights()
 
@@ -78,6 +79,9 @@ class TransformerModel(nn.Module):
         output = self.transformer_encoder(src, mask = src_mask)
         # デコーダにエンコーダの出力を入れる（ここがおかしい）
         output = self.transformer_decoder(trg, output, tgt_mask=trg_mask)
+        # print(output.size())
+        # output = self.linear(output)
+
         return output
 
 
@@ -140,22 +144,29 @@ def choose_dataset(flag, SRC):
 
 from tqdm import tqdm
 
-def train_model(model, iterator, optimizer, criterion):
+def train_model(model, iterator, optimizer, criterion, SRC):
     model.train()  # Turn on the train mode
     total_loss = 0.
     start_time = time.time()
     for _, batch in enumerate(iterator):
-        # print(i)
         src = batch.SRC
         trg = batch.TRG
         # print(src)
         optimizer.zero_grad()
         output = model(src, trg)
+        # print(output.argmax(2))
+        print("output sentence")
+        for index in output.argmax(2):
+            print([SRC.vocab.itos[i] for i in index])
         output = output.contiguous().view(-1, output.shape[-1])
-        # print(output)
+        # print("output size", output.size())
+        print("target sentence")
+        for index in trg:
+            print([SRC.vocab.itos[i] for i in index])
         trg = trg.contiguous().view(-1)
-        # print(trg)
+        # print("trg size: ", trg.size())
         loss = criterion(output, trg)
+        #print(loss.item())
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
         optimizer.step()
@@ -182,7 +193,6 @@ def evaluate_model(eval_model, data_source, criterion):
 
 def gen_sentence(sentence, src_field, trg_field, model, max_len = 50):
     model.eval()
-    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     tokens = [src_field.init_token] + \
         tokenizer(sentence) + [src_field.eos_token]
@@ -199,7 +209,7 @@ def gen_sentence(sentence, src_field, trg_field, model, max_len = 50):
     with torch.no_grad():
         src_output = model.transformer_encoder(src_tensor)
 
-    trg = trg_field.vocab.stoi[trg_field.eos_token]
+    trg = trg_field.vocab.stoi["<sos>"]
     trg = torch.LongTensor([[trg]]).to(device)
     output = []
     # print("src sizse: ", src_output.size())
@@ -225,6 +235,7 @@ def gen_sentence(sentence, src_field, trg_field, model, max_len = 50):
     # predict = "".join(output)
     predict = [trg_field.vocab.itos[i] for i in output]
     predict = "".join(predict)
+    print(predict)
 
     return predict
 
@@ -285,7 +296,7 @@ def main():
 
     print("building model...")
     ntokens = len(SRC.vocab.stoi)  # the size of vocabulary
-    emsize = len(SRC.vocab.stoi)  # embedding dimension
+    emsize = 256  # embedding dimension
     nhid = 256  # the dimension of the feedforward network model in nn.TransformerEncoder and nn.TransformerDecoder
     nlayers = 4  # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder and nn.TransformerDecoder
     nhead = 2  # the number of heads in the multiheadattention models
@@ -301,13 +312,14 @@ def main():
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1.0, gamma=0.95)
 
     best_val_loss = float("inf")
-    epochs = 100  # The number of epochs
+    epochs = 10  # The number of epochs
     best_model = None
     model.init_weights()
     print("training...")
+
     for epoch in range(1, epochs + 1):
         epoch_start_time = time.time()
-        t_loss = train_model(model, train_iter, optimizer, criterion)
+        t_loss = train_model(model, train_iter, optimizer, criterion, SRC)
         val_loss = evaluate_model(model, val_iter, criterion)
         print('-' * 65)
         print('| epoch {:3d} | time: {:3d}m {:3d}s | train loss {:5.2f} | valid loss {:5.2f} | '
@@ -324,7 +336,7 @@ def main():
     print('| End of training | test loss {:5.2f} | test ppl {:8.2f}'.format(
         test_loss, math.exp(test_loss)))
     print('=' * 89)
-    torch.save(best_model.state_dict(), "../model/transformer.pth")
+    torch.save(model.state_dict(), "../model/transformer.pth")
 
     model.state_dict(torch.load("../model/transformer.pth", map_location=device))
     # print(model.state_dict())
@@ -333,7 +345,8 @@ def main():
     path = "../data/test.tsv"
     test_input, test_output, test_pred = [], [], []
     test_input, test_output, test_pred = gen_sentence_list(model, path, SRC)
-
+    print(test_pred)
+    """
     path = "../data/train.tsv"
     train_input, train_output, train_pred = [], [], []
     train_input, train_output, train_pred = gen_sentence_list(model, path, SRC)
@@ -358,7 +371,7 @@ def main():
     with open("score_transformer.txt", mode="w") as f:
         f.write(f"一致率: {percentage}, 種類数: {kinds}, BLEU: {bleu}")
     print("done!")
-
+    """
 
 if __name__ == "__main__":
     main()

@@ -382,16 +382,16 @@ def main():
         end_time = time.time()
 
         epoch_mins, epoch_secs = epoch_time(start_time, end_time)
-
+        """
         if valid_loss < best_valid_loss:
             best_valid_loss = valid_loss
             best_model = model
-
+        """
         print("-"*65)
         print(
-            f'Epoch: {epoch+1:02} | Time: {epoch_mins}m {epoch_secs}s | Train Loss: {train_loss:.3f} | Val. Loss: {valid_loss:.3f}')
+            f'Epoch: {epoch+1:02} | Time: {epoch_mins}m {epoch_secs}s | Train Loss: {train_loss:.3f} | Val. Loss: {valid_loss:.3f} |')
 
-    torch.save(best_model.state_dict(),
+    torch.save(model.state_dict(),
                '../model/bert_embedded_seq2seq.pth')
     # model.apply(init_weights)
 
@@ -399,13 +399,11 @@ def main():
 
     print("generating sentences...")
     path = "../data/test.tsv"
-    test_input, test_output, test_pred = gen_sentence_list(
-        model, path, tok)
+    test_input, test_output, test_pred = gen_sentence_list(model, path, tok)
     print(test_pred)
 
     path = "../data/train.tsv"
-    train_input, train_output, train_pred = gen_sentence_list(
-        model, path, tok)
+    train_input, train_output, train_pred = gen_sentence_list(model, path, tok)
 
     path = "../data/val.tsv"
     val_input, val_output, val_pred = gen_sentence_list(model, path, tok)

@@ -743,3 +743,16 @@ Transformerは何も言わなくて、seq2seqは支離滅裂な文章が多か�
 学習させます
 
 </details>
+
+<details>
+<summary>12/24</summary>
+
+- 今日したこと
+
+Transformerのバグ取り
+
+- これからすること
+
+学習させる
+
+</details>
