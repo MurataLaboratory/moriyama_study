@@ -40,7 +40,7 @@ class TransformerModel(nn.Module):
         # self.linear = nn.Linear(32000 ,768)
         self.pos_encoder = PositionalEncoding(ninp, dropout)
         encoder_layers = TransformerEncoderLayer(ninp, nhead, nhid, dropout)
-        self.transformer_encoder = TransformerEncoder(encoder_layers, 
+        self.transformer_encoder = TransformerEncoder(encoder_layers,
                                                       nlayers)
                                                       # ,norm = bert_model.get_output_embeddings())
         self.encoder = bert_model.get_input_embeddings()
