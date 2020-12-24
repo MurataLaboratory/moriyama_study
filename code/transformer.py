@@ -155,6 +155,7 @@ def train_model(model, iterator, optimizer, criterion, SRC):
         optimizer.zero_grad()
         output = model(src, trg)
         # print(output.argmax(2))
+        """
         print("output sentence")
         for index in output.argmax(2):
             print([SRC.vocab.itos[i] for i in index])
@@ -163,6 +164,7 @@ def train_model(model, iterator, optimizer, criterion, SRC):
         print("target sentence")
         for index in trg:
             print([SRC.vocab.itos[i] for i in index])
+        """
         trg = trg.contiguous().view(-1)
         # print("trg size: ", trg.size())
         loss = criterion(output, trg)
@@ -296,8 +298,8 @@ def main():
 
     print("building model...")
     ntokens = len(SRC.vocab.stoi)  # the size of vocabulary
-    emsize = 256  # embedding dimension
-    nhid = 256  # the dimension of the feedforward network model in nn.TransformerEncoder and nn.TransformerDecoder
+    emsize = 512  # embedding dimension
+    nhid = 1024  # the dimension of the feedforward network model in nn.TransformerEncoder and nn.TransformerDecoder
     nlayers = 4  # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder and nn.TransformerDecoder
     nhead = 2  # the number of heads in the multiheadattention models
     dropout = 0.3  # the dropout value
