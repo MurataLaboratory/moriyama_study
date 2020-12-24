@@ -28,8 +28,8 @@ def get_freer_gpu():
     return np.argmax(memory_available)
 
 # 必要なモジュールのインポート
-# device = torch.device("cuda" if torch.cuda.is_available() else "cpu", index=get_freer_gpu())
-device = torch.device("cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu", index=get_freer_gpu())
+# device = torch.device("cpu")
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 
 
