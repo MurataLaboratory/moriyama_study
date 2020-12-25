@@ -165,7 +165,8 @@ def train_model(model, iterator, optimizer, criterion, SRC):
         for index in trg:
             print([SRC.vocab.itos[i] for i in index])
         """
-        trg = trg.contiguous().view(-1)
+        output = output[1:].contiguous().view(-1, output.shape[-1])
+        trg = trg[1:].contiguous().view(-1)
         # print("trg size: ", trg.size())
         loss = criterion(output, trg)
         #print(loss.item())
@@ -187,8 +188,8 @@ def evaluate_model(eval_model, data_source, criterion):
             targets = batch.TRG
             #src_mask = model.generate_square_subsequent_mask(data.shape[0]).to(device)
             output = eval_model(data, targets)
-            output_flat = output[:].contiguous().view(-1, output.shape[-1])
-            targets = targets[:].contiguous().view(-1)
+            output_flat = output[1:].contiguous().view(-1, output.shape[-1])
+            targets = targets[1:].contiguous().view(-1)
             total_loss += len(data) * criterion(output_flat, targets).item()
     return total_loss / len(data_source)
 
@@ -299,7 +300,7 @@ def main():
     print("building model...")
     ntokens = len(SRC.vocab.stoi)  # the size of vocabulary
     emsize = 512  # embedding dimension
-    nhid = 1024  # the dimension of the feedforward network model in nn.TransformerEncoder and nn.TransformerDecoder
+    nhid = 256  # the dimension of the feedforward network model in nn.TransformerEncoder and nn.TransformerDecoder
     nlayers = 4  # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder and nn.TransformerDecoder
     nhead = 2  # the number of heads in the multiheadattention models
     dropout = 0.3  # the dropout value
