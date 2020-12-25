@@ -24,19 +24,18 @@ import os
 from evaluate import eval_score
 print('hello world')
 
-
+"""
 def get_freer_gpu():
     os.system('nvidia-smi -q -d Memory |grep -A4 GPU|grep Free >tmp')
     memory_available = [int(x.split()[2])
                         for x in open('tmp', 'r').readlines()]
     return np.argmax(memory_available)
-
+"""
 
 # 必要なモジュールのインポート
-device = torch.device("cuda" if torch.cuda.is_available()
-                      else "cpu", index=get_freer_gpu())
+#device = torch.device("cuda" if torch.cuda.is_available() else "cpu", index=get_freer_gpu())
 # device = torch.device("cpu")
-
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 bert_model = BertForPreTraining.from_pretrained(
     "cl-tohoku/bert-base-japanese",  # 日本語Pre trainedモデルの指定
     num_labels=2,  # ラベル数（今回はBinayなので2、数値を増やせばマルチラベルも対応可）
