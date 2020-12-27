@@ -132,18 +132,18 @@ def tokenizer(text):
 # flagがTrueの時重複のないデータを返す
 
 
-def choose_dataset(flag, SRC):
+def choose_dataset(flag, SRC, TRG):
     if flag:
         train, val, test = data.TabularDataset.splits(
             path="../data/", train='one_train.tsv',
             validation='one_val.tsv', test='one_test.tsv', format='tsv',
-            fields=[('SRC', SRC), ('TRG', SRC)])
+            fields=[('SRC', SRC), ('TRG', TRG)])
         filename = "../csv/one_result_transformer.csv"
     else:
         train, val, test = data.TabularDataset.splits(
             path="../data/", train='train.tsv',
             validation='val.tsv', test='test.tsv', format='tsv',
-            fields=[('SRC', SRC), ('TRG', SRC)])
+            fields=[('SRC', SRC), ('TRG', TRG)])
         filename = "../csv/result_transformer.csv"
 
     return train, val, test, filename
@@ -281,12 +281,13 @@ def convert_list_to_df(in_list, out_list, pred_list):
 
 def main():
     print("preparing data...")
-    SRC = data.Field(sequential=True,
-                     tokenize=tokenizer,
-                     init_token='<sos>',
-                     eos_token='<eos>',
+    SRC = data.Field(tokenize=tokenizer,
                      lower=True)
-    train, val, test, filename = choose_dataset(False, SRC)
+    SRC = data.Field(tokenize=tokenizer,
+                    init_token='<sos>',
+                    eos_token='<eos>',
+                    lower=True)
+    train, val, test, filename = choose_dataset(False, SRC, TRG)
     SRC.build_vocab(train, min_freq=1)
 
     train_batch_size = 16
@@ -296,18 +297,19 @@ def main():
         train_batch_size, eval_batch_size, test_batch_size), device=device)
 
     print("building model...")
-    ntokens = len(SRC.vocab.stoi)  # the size of vocabulary
+    in_tokens = len(SRC.vocab.stoi)  # the size of vocabulary
+    out_tokens = len(TRG.vocab.stoi)
     emsize = 512  # embedding dimension
     nhid = 256  # the dimension of the feedforward network model in nn.TransformerEncoder and nn.TransformerDecoder
     nlayers = 4  # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder and nn.TransformerDecoder
     nhead = 2  # the number of heads in the multiheadattention models
     dropout = 0.3  # the dropout value
-    model = TransformerModel(ntokens, emsize, nhead,
+    model = TransformerModel(in_tokens, out_tokens, emsize, nhead,
                              nhid, nlayers, dropout).to(device)
 
     print(model)
 
-    criterion = nn.CrossEntropyLoss(ignore_index=SRC.vocab.stoi["<pad>"])
+    criterion = nn.CrossEntropyLoss()
     lr = 5  # learning rate
     optimizer = torch.optim.SGD(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1.0, gamma=0.95)
@@ -347,7 +349,6 @@ def main():
     test_input, test_output, test_pred = [], [], []
     test_input, test_output, test_pred = gen_sentence_list(model, path, SRC)
     print(test_pred)
-    """
     path = "../data/train.tsv"
     train_input, train_output, train_pred = [], [], []
     train_input, train_output, train_pred = gen_sentence_list(model, path, SRC)
@@ -372,7 +373,6 @@ def main():
     with open("score_transformer.txt", mode="w") as f:
         f.write(f"一致率: {percentage}, 種類数: {kinds}, BLEU: {bleu}")
     print("done!")
-    """
 
 if __name__ == "__main__":
     main()
