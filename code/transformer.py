@@ -33,65 +33,71 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu", index=get_
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 
 
+import math
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from torch.nn import TransformerEncoder, TransformerEncoderLayer, TransformerDecoder, TransformerDecoderLayer
+
 class TransformerModel(nn.Module):
 
-    def __init__(self, ntoken, ninp, nhead, nhid, nlayers, dropout=0.5):
+    def __init__(self, in_token, out_token, ninp, nhead, nhid, nlayers, dropout=0.5):
         super(TransformerModel, self).__init__()
-        if ninp%2 == 1:
-          ninp += 1
         self.model_type = 'Transformer'
         self.pos_encoder = PositionalEncoding(ninp, dropout)
+        encoder_norm = nn.LayerNorm(ninp)
         encoder_layers = TransformerEncoderLayer(ninp, nhead, nhid, dropout)
-        self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)
-        self.encoder = nn.Embedding(ntoken, ninp)
-        # self.decoder = nn.Embedding(ntoken, ninp)
+        self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers, encoder_norm)
+        self.encoder_embedding = nn.Embedding(in_token, ninp)
+        self.decoder_embedding = nn.Embedding(out_token, ninp)
         self.ninp = ninp
-        self.linear = nn.Linear(ninp, ntoken)
+        decoder_norm = nn.LayerNorm(ninp)
+        self.linear = nn.Linear(ninp, out_token)
         decoder_layers = TransformerDecoderLayer(ninp, nhead, nhid, dropout)
-        self.transformer_decoder = TransformerDecoder(decoder_layers, nlayers, norm=self.linear)
+        self.transformer_decoder = TransformerDecoder(decoder_layers, nlayers, norm = decoder_norm)
 
         self.init_weights()
 
     def generate_square_subsequent_mask(self, sz):
         mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)
-        mask = mask.float().masked_fill(mask == 0, float(
-            '-inf')).masked_fill(mask == 1, float(0.0))
+        mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
         return mask
 
     def init_weights(self):
         initrange = 0.1
-        self.encoder.weight.data.uniform_(-initrange, initrange)
-        # self.decoder.bias.data.zero_()
-        # self.decoder.weight.data.uniform_(-initrange, initrange)
+        self.encoder_embedding.weight.data.uniform_(-initrange, initrange)
+        self.linear.bias.data.zero_()
+        self.decoder_embedding.weight.data.uniform_(-initrange, initrange)
+        for p in self.parameters():
+            if p.dim() > 1:
+                nn.init.xavier_uniform_(p)
 
     def forward(self, src, trg):
-        src_mask = self.generate_square_subsequent_mask(
-            src.size()[0]).to(device)
-        trg_mask = self.generate_square_subsequent_mask(
-            trg.size()[0]).to(device)
+        # src_mask = model.generate_square_subsequent_mask(src.size()[0]).to(device)
+        trg_mask = model.generate_square_subsequent_mask(trg.size()[0]).to(device)
         # 分散表現に変換
-        src = self.encoder(src)
-        trg = self.encoder(trg)
+        src = self.encoder_embedding(src)
         # 位置情報を入れる
         src = self.pos_encoder(src)
-        trg = self.pos_encoder(trg)
         # モデルにデータを入れる
-        output = self.transformer_encoder(src, mask = src_mask)
-        # デコーダにエンコーダの出力を入れる（ここがおかしい）
-        output = self.transformer_decoder(trg, output, tgt_mask=trg_mask)
-        # print(output.size())
-        # output = self.linear(output)
+        output = self.transformer_encoder(src) #, mask = src_mask)
+        # デコーダにエンコーダの出力を入れる
+        # print("output size:", output.size())
+        # print("trg size: ", trg.size())
+        trg = self.decoder_embedding(trg)
+        trg = self.pos_encoder(trg)
+        output = self.transformer_decoder(trg, output,tgt_mask = trg_mask)
+        # softmaxで正規化するようにする
+        output = self.linear(output)
 
         return output
-
 
 class PositionalEncoding(nn.Module):
 
     def __init__(self, d_model, dropout=0.1, max_len=5000):
         super(PositionalEncoding, self).__init__()
         self.dropout = nn.Dropout(p=dropout)
-        #if d_model%2 != 0:
-        #  d_model += 1
+        self.d_model = d_model
         pe = torch.zeros(max_len, d_model)
         position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
         div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
@@ -104,9 +110,9 @@ class PositionalEncoding(nn.Module):
         self.register_buffer('pe', pe)
 
     def forward(self, x):
+        x = x * math.sqrt(self.d_model)
         x = x + self.pe[:x.size(0), :]
         return self.dropout(x)
-
 
 SEED = 1234
 
@@ -151,21 +157,12 @@ def train_model(model, iterator, optimizer, criterion, SRC):
     for _, batch in enumerate(iterator):
         src = batch.SRC
         trg = batch.TRG
+        trg_input = trg[:-1]
         # print(src)
         optimizer.zero_grad()
-        output = model(src, trg)
+        output = model(src, trg_input)
         # print(output.argmax(2))
-        """
-        print("output sentence")
-        for index in output.argmax(2):
-            print([SRC.vocab.itos[i] for i in index])
-        output = output.contiguous().view(-1, output.shape[-1])
-        # print("output size", output.size())
-        print("target sentence")
-        for index in trg:
-            print([SRC.vocab.itos[i] for i in index])
-        """
-        output = output[1:].contiguous().view(-1, output.shape[-1])
+        output = output[:].contiguous().view(-1, output.shape[-1])
         trg = trg[1:].contiguous().view(-1)
         # print("trg size: ", trg.size())
         loss = criterion(output, trg)
@@ -186,10 +183,11 @@ def evaluate_model(eval_model, data_source, criterion):
         for i, batch in enumerate(data_source):
             data = batch.SRC
             targets = batch.TRG
+            targets_input = targets[:-1]
             #src_mask = model.generate_square_subsequent_mask(data.shape[0]).to(device)
-            output = eval_model(data, targets)
+            output = eval_model(data, targets_input)
             output_flat = output[1:].contiguous().view(-1, output.shape[-1])
-            targets = targets[1:].contiguous().view(-1)
+            targets = targets[:].contiguous().view(-1)
             total_loss += len(data) * criterion(output_flat, targets).item()
     return total_loss / len(data_source)
 
@@ -205,7 +203,7 @@ def gen_sentence(sentence, src_field, trg_field, model, max_len = 50):
     src = src.to(device)
     # print(src)
 
-    src_tensor = model.encoder(src)
+    src_tensor = model.encoder_embedding(src)
     src_tensor = model.pos_encoder(src_tensor).to(device)
     # src_mask = model.generate_square_subsequent_mask(src_tensor.size()[0]).to(device)
     # print(src_tensor)
@@ -219,7 +217,7 @@ def gen_sentence(sentence, src_field, trg_field, model, max_len = 50):
     for i in range(max_len):
         # print("trg size: ", trg.size())
         # print([trg_field.vocab.itos[i] for i in trg])
-        trg_tensor = model.encoder(trg)
+        trg_tensor = model.decoder_embedding(trg)
         # print(trg_tensor.size())
         trg_tensor = model.pos_encoder(trg_tensor).to(device)
         # trg_mask = model.generate_square_subsequent_mask(trg_tensor.size()[0]).to(device)
