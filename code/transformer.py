@@ -241,7 +241,7 @@ def gen_sentence(sentence, src_field, trg_field, model, max_len = 50):
     return predict
 
 
-def gen_sentence_list(model, path, SRC):
+def gen_sentence_list(model, path, SRC, TRG):
     col, pred = [], []
     input, output = [], []
     with open(path, mode='r', encoding="utf-8") as f:
@@ -252,7 +252,7 @@ def gen_sentence_list(model, path, SRC):
         output.append(i[1].replace("\n", ""))
     bar = tqdm(total=len(input))
     for sentence in input:
-        pred.append(gen_sentence(sentence, SRC, SRC, model))
+        pred.append(gen_sentence(sentence, SRC, TRG, model))
         bar.update(1)
     return input, output, pred
 
