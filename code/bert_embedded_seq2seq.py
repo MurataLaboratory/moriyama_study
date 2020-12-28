@@ -346,7 +346,7 @@ def main():
     DEC_EMB_DIM = 768
     ENC_HID_DIM = 256
     DEC_HID_DIM = 256
-    N_LAYERS = 4
+    N_LAYERS = 1
     ENC_DROPOUT = 0.3
     DEC_DROPOUT = 0.3
 
