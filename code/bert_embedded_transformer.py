@@ -313,7 +313,7 @@ def main():
       val_loss = evaluate(model, valid_data_loader, criterion)
       print('-' * 89)
       print('| epoch {:3d} | time: {:3d}m {:3d}s | train loss {:5.2f} | valid loss {:5.2f} | '
-              .format(epoch, int((time.time() - epoch_start_time)/60), int((time.time() - epoch_start_time)%60,) t_loss, val_loss))
+              .format(epoch, int((time.time() - epoch_start_time)/60), int((time.time() - epoch_start_time)%60), t_loss, val_loss))
 
       train_loss_list.append(t_loss)
       eval_loss_list.append(val_loss)
