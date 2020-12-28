@@ -299,9 +299,9 @@ def main():
     print("building model...")
     in_tokens = len(SRC.vocab.stoi)  # the size of vocabulary
     out_tokens = len(TRG.vocab.stoi)
-    emsize = 512  # embedding dimension
-    nhid = 256  # the dimension of the feedforward network model in nn.TransformerEncoder and nn.TransformerDecoder
-    nlayers = 4  # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder and nn.TransformerDecoder
+    emsize = 763# embedding dimension
+    nhid = 512 # the dimension of the feedforward network model in nn.TransformerEncoder and nn.TransformerDecoder
+    nlayers = 1  # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder and nn.TransformerDecoder
     nhead = 2  # the number of heads in the multiheadattention models
     dropout = 0.3  # the dropout value
     model = TransformerModel(in_tokens, out_tokens, emsize, nhead,

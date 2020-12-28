@@ -288,7 +288,7 @@ def main():
   print("building model...")
   emsize = 768 # embedding dimension
   nhid = 512 # the dimension of the feedforward network model in nn.TransformerEncoder
-  nlayers = 4 # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder
+  nlayers = 1 # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder
   nhead = 2 # the number of heads in the multiheadattention models
   dropout = 0.3 # the dropout value
   model = TransformerModel( emsize, nhead, nhid, nlayers, dropout).to(device)
