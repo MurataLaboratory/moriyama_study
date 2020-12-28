@@ -152,6 +152,8 @@ def evaluate(eval_model, data_loader, criterion):
         output = eval_model(src, trg)
         output_flat = output[:].view(-1, output.shape[-1])
         trg = trg[1:].contiguous().view(-1)
+        print(output_flat.size())
+        print(trg.size())
         total_loss += criterion(output_flat, trg).item()
     return total_loss / (len(data_loader) - 1)
 """
