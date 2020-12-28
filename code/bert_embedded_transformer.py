@@ -20,7 +20,7 @@ bert_model = BertForPreTraining.from_pretrained(
       output_attentions = False, # アテンションベクトルを出力するか
       output_hidden_states = True, # 隠れ層を出力するか
   )
-
+"""
 def get_freer_gpu():
     os.system('nvidia-smi -q -d Memory |grep -A4 GPU|grep Free >tmp')
     memory_available = [int(x.split()[2]) for x in open('tmp', 'r').readlines()]
@@ -28,7 +28,9 @@ def get_freer_gpu():
 
 # 必要なモジュールのインポート
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu", index=get_freer_gpu())
+"""
 # device = torch.device("cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class TransformerModel(nn.Module):
 
@@ -39,18 +41,18 @@ class TransformerModel(nn.Module):
         self.model_type = 'Transformer'
         # self.linear = nn.Linear(32000 ,768)
         self.pos_encoder = PositionalEncoding(ninp, dropout)
+        encoder_norm = nn.LayerNorm(ninp)
         encoder_layers = TransformerEncoderLayer(ninp, nhead, nhid, dropout)
         self.transformer_encoder = TransformerEncoder(encoder_layers,
-                                                      nlayers)
-                                                      # ,norm = bert_model.get_output_embeddings())
+                                                      nlayers, norm = encoder_norm)
         self.encoder = bert_model.get_input_embeddings()
         self.ninp = ninp
-        # self.decoder = bert_model.get_input_embeddings()
-        # self.decoder = nn.Embedding(ntoken, ninp)
+        decoder_norm = nn.LayerNorm(ninp)
         decoder_layers = TransformerDecoderLayer(ninp, nhead, nhid, dropout)
-        self.transformer_decoder = TransformerDecoder(decoder_layers, 
+        self.transformer_decoder = TransformerDecoder(decoder_layers,
                                                       nlayers
-                                                      ,norm= bert_model.get_output_embeddings())
+                                                      ,norm=decoder_norm)
+        self.linear = bert_model.get_output_embeddings()
         self.init_weights()
 
     def generate_square_subsequent_mask(self, sz):
@@ -65,7 +67,7 @@ class TransformerModel(nn.Module):
         #self.decoder.weight.data.uniform_(-initrange, initrange)
 
     def forward(self, src, trg):
-        src_mask = self.generate_square_subsequent_mask(src.size()[0]).to(device)
+        # src_mask = self.generate_square_subsequent_mask(src.size()[0]).to(device)
         trg_mask = self.generate_square_subsequent_mask(trg.size()[0]).to(device)
         # 分散表現に変換
         src = self.encoder(src)
@@ -74,12 +76,13 @@ class TransformerModel(nn.Module):
         src = self.pos_encoder(src)
         trg = self.pos_encoder(trg)
         # モデルにデータを入れる
-        enc_output = self.transformer_encoder(src, mask=src_mask)
+        enc_output = self.transformer_encoder(src)
         # enc_output = self.linear(enc_output)
         # print("enc output size: ", enc_output.size())
         # print("trg size: ", trg.size())
         # デコーダにエンコーダの出力を入れる（ここがおかしい）
-        output = self.transformer_decoder(trg, enc_output,tgt_mask = trg_mask, memory_mask = src_mask)
+        output = self.transformer_decoder(trg, enc_output,tgt_mask = trg_mask)
+        output = self.linear(output)
         return output
 
 class PositionalEncoding(nn.Module):
@@ -120,10 +123,11 @@ def train(model, data_loader, optimizer, criterion):
         src = torch.t(src).to(device)
         trg = torch.t(trg).to(device)
         # print(src)
+        trg_input = trg[:-1]
         optimizer.zero_grad()
-        output = model(src, trg)
+        output = model(src, trg_input)
         output = output[:].view(-1, output.shape[-1])
-        trg = trg[:].contiguous().view(-1)
+        trg = trg[1:].contiguous().view(-1)
         # print("trg size :", trg.size())
         # print("output size: ", output.size())
         loss = criterion(output, trg)
@@ -144,9 +148,10 @@ def evaluate(eval_model, data_loader, criterion):
         src = torch.t(src).to(device)
         trg = torch.t(trg).to(device)
         #src_mask = model.generate_square_subsequent_mask(data.shape[0]).to(device)
+        trg_input = trg[:-1]
         output = eval_model(src, trg)
         output_flat = output[:].view(-1, output.shape[-1])
-        trg = trg[:].contiguous().view(-1)
+        trg = trg[1:].contiguous().view(-1)
         total_loss += criterion(output_flat, trg).item()
     return total_loss / (len(data_loader) - 1)
 """
@@ -183,13 +188,12 @@ def gen_sentence(sentence, tok, model, max_len = 50):
   # print("src sizse: ", src_output.size())
   for i in range(max_len):
     # print("trg size: ", trg.size())
-    print(tok.convert_ids_to_tokens(trg))
+    # print(tok.convert_ids_to_tokens(trg))
     trg_tensor = model.encoder(trg)
     # print(trg_tensor.size())
     trg_tensor = model.pos_encoder(trg_tensor).to(device)
-    trg_mask = model.generate_square_subsequent_mask(trg_tensor.size()[0]).to(device)
     with torch.no_grad():
-      pred = model.transformer_decoder(trg_tensor, src_output, trg_mask)
+      pred = model.transformer_decoder(trg_tensor, src_output)
     # print("predicit sizes: ", pred.size())
     pred_word_index = pred.argmax(2)[-1]
     # add_word = trg_field.vocab.itos[pred_word_index.item()]
@@ -283,14 +287,14 @@ def main():
 
   print("building model...")
   emsize = 768 # embedding dimension
-  nhid = 1024 # the dimension of the feedforward network model in nn.TransformerEncoder
+  nhid = 512 # the dimension of the feedforward network model in nn.TransformerEncoder
   nlayers = 4 # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder
   nhead = 2 # the number of heads in the multiheadattention models
   dropout = 0.3 # the dropout value
   model = TransformerModel( emsize, nhead, nhid, nlayers, dropout).to(device)
 
   print(model)
-  criterion = nn.CrossEntropyLoss(ignore_index=0)
+  criterion = nn.CrossEntropyLoss()
   lr = 5 # learning rate
   optimizer = torch.optim.SGD(model.parameters(), lr=lr)
   scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1.0, gamma=0.95)
