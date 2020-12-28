@@ -149,7 +149,7 @@ def evaluate(eval_model, data_loader, criterion):
         trg = torch.t(trg).to(device)
         #src_mask = model.generate_square_subsequent_mask(data.shape[0]).to(device)
         trg_input = trg[:-1]
-        output = eval_model(src, trg)
+        output = eval_model(src, trg_input)
         output_flat = output[:].view(-1, output.shape[-1])
         trg = trg[1:].contiguous().view(-1)
         print(output_flat.size())
