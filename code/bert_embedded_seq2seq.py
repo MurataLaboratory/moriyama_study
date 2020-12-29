@@ -158,6 +158,13 @@ class Seq2Seq(nn.Module):
 
         return outputs
 
+def cut_tensor(tensor):
+  for index, padded_tensor in enumerate(tensor):
+    # print(padded_tensor.size(0))
+    sum_pad = sum(0 == padded_tensor).item()
+    if sum_pad == padded_tensor.size(0):
+      break
+  return tensor[:index]
 
 def init_weights(m):
     for name, param in m.named_parameters():
@@ -171,6 +178,8 @@ def train(model, data_loader, optimizer, criterion, clip):
     for src, trg in data_loader:
         src = torch.t(src).to(device)
         trg = torch.t(trg).to(device)
+        src = cut_tensor(src)
+        trg = cut_tensor(trg)
         src = src.to('cpu').detach().numpy().copy()
         src = np.flipud(src)
         src = torch.from_numpy(src.astype(np.int32)).clone()
@@ -203,6 +212,8 @@ def evaluate(model, data_loader, criterion):
 
             src = torch.t(src).to(device)
             trg = torch.t(trg).to(device)
+            src = cut_tensor(src)
+            trg = cut_tensor(trg)
             src = src.to('cpu').detach().numpy().copy()
             src = np.flipud(src)
             src = torch.from_numpy(src.astype(np.int32)).clone()

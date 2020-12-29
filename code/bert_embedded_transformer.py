@@ -112,6 +112,14 @@ tok = BertJapaneseTokenizer.from_pretrained('cl-tohoku/bert-base-japanese')
 def tokenizer(text):
   return tok.tokenize(text)
 
+def cut_tensor(tensor):
+  for index, padded_tensor in enumerate(tensor):
+    # print(padded_tensor.size(0))
+    sum_pad = sum(0 == padded_tensor).item()
+    if sum_pad == padded_tensor.size(0):
+      break
+  return tensor[:index]
+
 from tqdm import tqdm
 
 import time
@@ -120,14 +128,20 @@ def train(model, data_loader, optimizer, criterion):
     total_loss = 0.
     start_time = time.time()
     for src, trg in data_loader:
-        src = torch.t(src).to(device)
+        src = torch.t(src).to(device)[1:]
         trg = torch.t(trg).to(device)
-        # print(src)
+        src = cut_tensor(src)
+        trg = cut_tensor(trg)
+        # print("src: ", src)
+        # print("trg: ", trg)
         trg_input = trg[:-1]
         optimizer.zero_grad()
         output = model(src, trg_input)
+        # for index in output.argmax(2):
+        #   print(tok.convert_ids_to_tokens(index))
         output = output[:].view(-1, output.shape[-1])
         trg = trg[1:].contiguous().view(-1)
+        # print("trg: ", trg)
         # print("trg size :", trg.size())
         # print("output size: ", output.size())
         loss = criterion(output, trg)
@@ -145,8 +159,10 @@ def evaluate(eval_model, data_loader, criterion):
     total_loss = 0.
     with torch.no_grad():
       for src, trg in data_loader:
-        src = torch.t(src).to(device)
+        src = torch.t(src).to(device)[1:]
         trg = torch.t(trg).to(device)
+        src = cut_tensor(src)
+        trg = cut_tensor(trg)
         #src_mask = model.generate_square_subsequent_mask(data.shape[0]).to(device)
         trg_input = trg[:-1]
         output = eval_model(src, trg_input)
@@ -154,34 +170,24 @@ def evaluate(eval_model, data_loader, criterion):
         trg = trg[1:].contiguous().view(-1)
         total_loss += criterion(output_flat, trg).item()
     return total_loss / (len(data_loader) - 1)
-"""
-from matplotlib import pyplot as plt
-y = list(range(epochs))
-train_loss = plt.plot(y, train_loss_list)
-valid_loss = plt.plot(y, eval_loss_list)
-plt.xlabel("epochs")
-plt.ylabel("loss")
-plt.legend((train_loss[0], valid_loss[0]), ("train loss", "valid loss"),)
-plt.show()
-"""
 
 def gen_sentence(sentence, tok, model, max_len = 50):
   model.eval()
   # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
   sentence = tok.tokenize(sentence)
-  src = [tok.convert_tokens_to_ids("[CLS]")] + tok.convert_tokens_to_ids(sentence) + [tok.convert_tokens_to_ids("[SEP]")]
+  src = tok.convert_tokens_to_ids(sentence) + [tok.convert_tokens_to_ids("[SEP]")]
   src = torch.LongTensor([src])
   # print(src)
   src = torch.t(src)
   src = src.to(device)
 
-  src_tensor = model.encoder(src)
-  src_tensor = model.pos_encoder(src_tensor).to(device)
-  src_mask = model.generate_square_subsequent_mask(src_tensor.size()[0]).to(device)
+  # src_tensor = model.encoder(src)
+  # src_tensor = model.pos_encoder(src_tensor).to(device)
+  # src_mask = model.generate_square_subsequent_mask(src_tensor.size()[0]).to(device)
   # print(src_tensor)
-  with torch.no_grad():
-    src_output = model.transformer_encoder(src_tensor, src_mask)
+  # with torch.no_grad():
+  #   src_output = model.transformer_encoder(src_tensor, src_mask)
   trg = tok.convert_tokens_to_ids("[CLS]")
   trg = torch.LongTensor([[trg]]).to(device)
   output = []
@@ -189,11 +195,11 @@ def gen_sentence(sentence, tok, model, max_len = 50):
   for i in range(max_len):
     # print("trg size: ", trg.size())
     # print(tok.convert_ids_to_tokens(trg))
-    trg_tensor = model.encoder(trg)
+    # trg_tensor = model.encoder(trg)
     # print(trg_tensor.size())
-    trg_tensor = model.pos_encoder(trg_tensor).to(device)
+    # trg_tensor = model.pos_encoder(trg_tensor).to(device)
     with torch.no_grad():
-      pred = model.transformer_decoder(trg_tensor, src_output)
+      pred = model(src, trg)
     # print("predicit sizes: ", pred.size())
     pred_word_index = pred.argmax(2)[-1]
     # add_word = trg_field.vocab.itos[pred_word_index.item()]
@@ -204,15 +210,14 @@ def gen_sentence(sentence, tok, model, max_len = 50):
 
     last_index = torch.LongTensor([[pred_word_index.item()]]).to(device)
     trg = torch.cat((trg, last_index))
-    
   # predict = "".join(output)
   predict = tok.convert_ids_to_tokens(output)
   predit = "".join(predict)
-
+  # print(predict)
   return predict
 
 
-def gen_sentence_list(model, path): 
+def gen_sentence_list(model, path):
   col, pred = [], []
   input, output = [], []
   with open(path, mode = 'r', encoding = "utf-8") as f:
@@ -248,7 +253,7 @@ def convert_list_to_df(in_list, out_list, pred_list):
 
 def main():
   os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
-  
+
   SEED = 1234
 
   random.seed(SEED)
@@ -261,7 +266,7 @@ def main():
   print("preparing data..")
   path = "../data/data.tsv"
   src, trg, tmp = [], [], []
-  with open(path, mode='r') as f:
+  with open(path, mode='r', encoding = "utf-8") as f:
     for file in f:
       sentence = file.split("\t")
       tmp.append(sentence)
@@ -272,8 +277,8 @@ def main():
       src.append(sentence[0])
       trg.append(sentence[1].replace("\t", ""))
 
-  src_tensors = tok.__call__(text = src, text_pair = trg, padding=True, return_tensors='pt', return_attention_mask=False)
-  trg_tensors = tok.__call__(text = trg, text_pair = src, padding=True, return_tensors='pt', return_attention_mask=False)
+  src_tensors = tok(text = src, text_pair = trg, padding=True, return_tensors='pt', return_attention_mask=False)
+  trg_tensors = tok(text = trg, text_pair = src, padding=True, return_tensors='pt', return_attention_mask=False)
 
   dataset = torch.utils.data.TensorDataset(src_tensors['input_ids'], trg_tensors['input_ids'])
 
@@ -281,7 +286,7 @@ def main():
   valid_size = len(dataset) - train_size
   train_data, valid_data = torch.utils.data.random_split(dataset, [train_size, valid_size])
 
-  batch_size = 32
+  batch_size = 8
   train_data_loader = torch.utils.data.DataLoader(train_data, batch_size, shuffle=True)
   valid_data_loader = torch.utils.data.DataLoader(valid_data, batch_size, shuffle=True)
 
@@ -291,7 +296,7 @@ def main():
   nlayers = 1 # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder
   nhead = 2 # the number of heads in the multiheadattention models
   dropout = 0.3 # the dropout value
-  model = TransformerModel( emsize, nhead, nhid, nlayers, dropout).to(device)
+  model = TransformerModel(emsize, nhead, nhid, nlayers, dropout).to(device)
 
   print(model)
   criterion = nn.CrossEntropyLoss()
@@ -301,7 +306,7 @@ def main():
 
 
   best_val_loss = float("inf")
-  epochs = 100 # The number of epochs
+  epochs = 5 # The number of epochs
   best_model = None
   model.init_weights()
   train_loss_list, eval_loss_list = [], []
@@ -321,14 +326,35 @@ def main():
       if val_loss < best_val_loss:
           best_val_loss = val_loss
           best_model = model
+      model.eval()
+      sentence = "今日は良い日ですね"
+      sentence = tok.tokenize(sentence)
+      src = tok.convert_tokens_to_ids(sentence) + [tok.convert_tokens_to_ids("[SEP]")]
+      src = torch.LongTensor([src])
+      src = torch.t(src)
+      src = src.to(device)
+      trg = tok.convert_tokens_to_ids("[CLS]")
+      trg = torch.LongTensor([[trg]]).to(device)
+      output = []
+      for i in range(25):
+          with torch.no_grad():
+            pred = model(src, trg)
+          pred_word_index = pred.argmax(2)[-1]
+          output.append(pred_word_index)
+          if pred_word_index == 3:
+            break
 
+          last_index = torch.LongTensor([[pred_word_index.item()]]).to(device)
+          trg = torch.cat((trg, last_index))
+      predict = tok.convert_ids_to_tokens(output)
+      print(predict)
       scheduler.step()
 
   torch.save(best_model.state_dict(), "../model/bert_embedded_transformer.pth")
 
   # model.init_weights()
 
-  # model.state_dict(torch.load("../model/bert_embedded_transformer.pth"))
+  model.state_dict(torch.load("../model/bert_embedded_transformer.pth"))
 
   print("generating sentence from text..")
   path = "../data/test.tsv"

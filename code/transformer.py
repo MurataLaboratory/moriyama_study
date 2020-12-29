@@ -186,8 +186,8 @@ def evaluate_model(eval_model, data_source, criterion):
             targets_input = targets[:-1]
             #src_mask = model.generate_square_subsequent_mask(data.shape[0]).to(device)
             output = eval_model(data, targets_input)
-            output_flat = output[1:].contiguous().view(-1, output.shape[-1])
-            targets = targets[:].contiguous().view(-1)
+            output_flat = output[:].contiguous().view(-1, output.shape[-1])
+            targets = targets[1:].contiguous().view(-1)
             total_loss += len(data) * criterion(output_flat, targets).item()
     return total_loss / len(data_source)
 
@@ -311,7 +311,7 @@ def main():
 
     criterion = nn.CrossEntropyLoss()
     lr = 5  # learning rate
-    optimizer = torch.optim.SGD(model.parameters(), lr=lr)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.0001, betas=(0.9, 0.98), eps=1e-9)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1.0, gamma=0.95)
 
     best_val_loss = float("inf")
