@@ -18,7 +18,7 @@ from evaluate import eval_score
 
 print('hello world')
 
-
+"""
 def get_freer_gpu():
     os.system('nvidia-smi -q -d Memory |grep -A4 GPU|grep Free >tmp')
     memory_available = [int(x.split()[2])
@@ -29,7 +29,8 @@ def get_freer_gpu():
 # 必要なモジュールのインポート
 device = torch.device("cuda" if torch.cuda.is_available()
                       else "cpu", index=get_freer_gpu())
-
+"""
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 SEED = 1234
 
 random.seed(SEED)
