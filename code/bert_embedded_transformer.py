@@ -239,9 +239,9 @@ def convert_list_to_df(in_list, out_list, pred_list):
     batch_input = in_list[i]
     batch_output = out_list[i]
     batch_pred = pred_list[i]
-    input = [j for j in batch_input if j != "<pad>" and j != "<sos>" and j != "<eos>" and j != "<unk>"]
-    output = [j for j in batch_output if j != "<pad>" and j != "<sos>" and j != "<eos>" and j != "<unk>"]
-    predict = [j for j in batch_pred if j != "<pad>" and j != "<sos>" and j != "<eos>" and j != "<unk>"]
+    input = [j for j in batch_input if j != "<pad>" and j != "<sos>" and j != "[SEP]" and j != "<unk>"]
+    output = [j for j in batch_output if j != "<pad>" and j != "<sos>" and j != "[SEP]" and j != "<unk>"]
+    predict = [j for j in batch_pred if j != "<pad>" and j != "<sos>" and j != "[SEP]" and j != "<unk>"]
     input_str = "".join(input).replace("#", "")
     output_str ="".join(output).replace("#", "")
     predict_str = "".join(predict).replace("#", "")
@@ -286,7 +286,7 @@ def main():
   valid_size = len(dataset) - train_size
   train_data, valid_data = torch.utils.data.random_split(dataset, [train_size, valid_size])
 
-  batch_size = 8
+  batch_size = 64
   train_data_loader = torch.utils.data.DataLoader(train_data, batch_size, shuffle=True)
   valid_data_loader = torch.utils.data.DataLoader(valid_data, batch_size, shuffle=True)
 
@@ -306,7 +306,7 @@ def main():
 
 
   best_val_loss = float("inf")
-  epochs = 5 # The number of epochs
+  epochs = 100 # The number of epochs
   best_model = None
   model.init_weights()
   train_loss_list, eval_loss_list = [], []
