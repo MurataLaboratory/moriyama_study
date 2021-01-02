@@ -210,9 +210,9 @@ def gen_sentence(sentence, src_field, trg_field, model, max_len = 50):
             pred = model(src, trg)
         pred_word_index = pred.argmax(2)[-1]
         # add_word = trg_field.vocab.itos[pred_word_index.item()]
-        output.append(pred_word_index)
         if pred_word_index == trg_field.vocab.stoi[trg_field.eos_token]:
             break
+        output.append(pred_word_index)
 
         last_index = torch.LongTensor([[pred_word_index.item()]]).to(device)
         trg = torch.cat((trg, last_index))
