@@ -44,8 +44,6 @@ class TransformerModel(nn.Module):
 
     def __init__(self, in_token, out_token, ninp, nhead, nhid, nlayers, dropout=0.5):
         super(TransformerModel, self).__init__()
-        if ninp%2 == 1:
-            ninp += 1
         self.model_type = 'Transformer'
         self.pos_encoder = PositionalEncoding(ninp, dropout)
         encoder_norm = nn.LayerNorm(ninp)
@@ -71,9 +69,6 @@ class TransformerModel(nn.Module):
         self.encoder_embedding.weight.data.uniform_(-initrange, initrange)
         self.linear.bias.data.zero_()
         self.decoder_embedding.weight.data.uniform_(-initrange, initrange)
-        for p in self.parameters():
-            if p.dim() > 1:
-                nn.init.xavier_uniform_(p)
 
     def forward(self, src, trg):
         # src_mask = model.generate_square_subsequent_mask(src.size()[0]).to(device)
@@ -174,7 +169,7 @@ def train_model(model, iterator, optimizer, criterion, SRC):
         torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
         optimizer.step()
 
-        total_loss += float(loss.item()) * len(src)
+        total_loss += loss.item() * len(src)
 
     return total_loss / len(iterator)
 
@@ -289,7 +284,7 @@ def main():
     print("building model...")
     in_tokens = len(SRC.vocab.stoi)  # the size of vocabulary
     out_tokens = len(TRG.vocab.stoi)
-    emsize = 763# embedding dimension
+    emsize = 768 # embedding dimension
     nhid = 1024 # the dimension of the feedforward network model in nn.TransformerEncoder and nn.TransformerDecoder
     nlayers = 1  # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder and nn.TransformerDecoder
     nhead = 2  # the number of heads in the multiheadattention models
@@ -300,14 +295,14 @@ def main():
     print(model)
 
     criterion = nn.CrossEntropyLoss(ignore_index=TRG.vocab.stoi["<unk>"])
-    lr = 5  # learning rate
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.0001, betas=(0.9, 0.98), eps=1e-9)
+    lr = 0.0001  # learning rate
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1.0, gamma=0.95)
 
     best_val_loss = float("inf")
     epochs = 100  # The number of epochs
     best_model = None
-    model.init_weights()
+    # model.init_weights()
     print("training...")
 
     for epoch in range(1, epochs + 1):
@@ -315,7 +310,7 @@ def main():
         t_loss = train_model(model, train_iter, optimizer, criterion, SRC)
         val_loss = evaluate_model(model, val_iter, criterion)
         print('-' * 65)
-        print('| epoch {:3d} | time: {:3d}m {:3d}s | train loss {:5.2f} | valid loss {:5.2f} | '
+        print('| epoch {:3d} | time: {:3d}m {:3d}s | train loss {:5.2f} | valid loss {:5.2f}'
               .format(epoch, int((time.time() - epoch_start_time)/60), int((time.time() - epoch_start_time)%60), t_loss, val_loss))
 
         if val_loss < best_val_loss:
