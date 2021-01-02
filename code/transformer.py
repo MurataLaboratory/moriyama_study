@@ -356,7 +356,6 @@ def main():
     path = "../data/test.tsv"
     test_input, test_output, test_pred = [], [], []
     test_input, test_output, test_pred = gen_sentence_list(model, path, SRC, TRG)
-    print(test_pred)
     path = "../data/train.tsv"
     train_input, train_output, train_pred = [], [], []
     train_input, train_output, train_pred = gen_sentence_list(model, path, SRC, TRG)
