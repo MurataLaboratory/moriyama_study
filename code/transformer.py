@@ -43,6 +43,8 @@ class TransformerModel(nn.Module):
 
     def __init__(self, in_token, out_token, ninp, nhead, nhid, nlayers, dropout=0.5):
         super(TransformerModel, self).__init__()
+        if ninp%2 == 1:
+            ninp += 1
         self.model_type = 'Transformer'
         self.pos_encoder = PositionalEncoding(ninp, dropout)
         encoder_norm = nn.LayerNorm(ninp)
@@ -74,7 +76,7 @@ class TransformerModel(nn.Module):
 
     def forward(self, src, trg):
         # src_mask = model.generate_square_subsequent_mask(src.size()[0]).to(device)
-        trg_mask = model.generate_square_subsequent_mask(trg.size()[0]).to(device)
+        trg_mask = self.generate_square_subsequent_mask(trg.size()[0]).to(device)
         # 分散表現に変換
         src = self.encoder_embedding(src)
         # 位置情報を入れる
@@ -195,35 +197,21 @@ def evaluate_model(eval_model, data_source, criterion):
 def gen_sentence(sentence, src_field, trg_field, model, max_len = 50):
     model.eval()
 
-    tokens = [src_field.init_token] + \
-        tokenizer(sentence) + [src_field.eos_token]
+    # tokens = [src_field.init_token] + \
+    #    tokenizer(sentence) + [src_field.eos_token]
+    tokens = tokenizer(sentence)
     src = [src_field.vocab.stoi[i] for i in tokens]
     src = torch.LongTensor([src])
     src = torch.t(src)
     src = src.to(device)
-    # print(src)
-
-    src_tensor = model.encoder_embedding(src)
-    src_tensor = model.pos_encoder(src_tensor).to(device)
-    # src_mask = model.generate_square_subsequent_mask(src_tensor.size()[0]).to(device)
-    # print(src_tensor)
-    with torch.no_grad():
-        src_output = model.transformer_encoder(src_tensor)
-
-    trg = trg_field.vocab.stoi["<sos>"]
+    trg = trg_field.vocab.stoi[trg_field.init_token]
     trg = torch.LongTensor([[trg]]).to(device)
     output = []
     # print("src sizse: ", src_output.size())
     for i in range(max_len):
-        # print("trg size: ", trg.size())
-        # print([trg_field.vocab.itos[i] for i in trg])
-        trg_tensor = model.decoder_embedding(trg)
-        # print(trg_tensor.size())
-        trg_tensor = model.pos_encoder(trg_tensor).to(device)
-        # trg_mask = model.generate_square_subsequent_mask(trg_tensor.size()[0]).to(device)
         with torch.no_grad():
-            pred = model.transformer_decoder(trg_tensor, src_output)
-        # print("predicit sizes: ", pred.size())
+            # pred = model.transformer_decoder(trg_tensor, src_output, tgt_mask = trg_mask)
+            pred = model(src, trg)
         pred_word_index = pred.argmax(2)[-1]
         # add_word = trg_field.vocab.itos[pred_word_index.item()]
         output.append(pred_word_index)
@@ -236,7 +224,7 @@ def gen_sentence(sentence, src_field, trg_field, model, max_len = 50):
     # predict = "".join(output)
     predict = [trg_field.vocab.itos[i] for i in output]
     predict = "".join(predict)
-    print(predict)
+    # print(predict)
 
     return predict
 
@@ -283,14 +271,15 @@ def main():
     print("preparing data...")
     SRC = data.Field(tokenize=tokenizer,
                      lower=True)
-    SRC = data.Field(tokenize=tokenizer,
+    TRG = data.Field(tokenize=tokenizer,
                     init_token='<sos>',
                     eos_token='<eos>',
                     lower=True)
     train, val, test, filename = choose_dataset(False, SRC, TRG)
     SRC.build_vocab(train, min_freq=1)
+    TRG.build_vocab(train, min_freq=1)
 
-    train_batch_size = 16
+    train_batch_size = 32
     test_batch_size = 32
     eval_batch_size = 32
     train_iter, val_iter, test_iter = data.BucketIterator.splits((train, val, test), sort=False,  batch_sizes=(
@@ -300,7 +289,7 @@ def main():
     in_tokens = len(SRC.vocab.stoi)  # the size of vocabulary
     out_tokens = len(TRG.vocab.stoi)
     emsize = 763# embedding dimension
-    nhid = 512 # the dimension of the feedforward network model in nn.TransformerEncoder and nn.TransformerDecoder
+    nhid = 1024 # the dimension of the feedforward network model in nn.TransformerEncoder and nn.TransformerDecoder
     nlayers = 1  # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder and nn.TransformerDecoder
     nhead = 2  # the number of heads in the multiheadattention models
     dropout = 0.3  # the dropout value
@@ -309,13 +298,13 @@ def main():
 
     print(model)
 
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.CrossEntropyLoss(ignore_index=TRG.vocab.stoi["<unk>"])
     lr = 5  # learning rate
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0001, betas=(0.9, 0.98), eps=1e-9)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1.0, gamma=0.95)
 
     best_val_loss = float("inf")
-    epochs = 10  # The number of epochs
+    epochs = 100  # The number of epochs
     best_model = None
     model.init_weights()
     print("training...")
@@ -333,6 +322,29 @@ def main():
             best_model = model
 
         scheduler.step()
+        model.eval()
+        sentence = "今日はいい日ですね"
+        output = []
+        sentence = SRC.preprocess(sentence)
+        # print(sentence)
+        index = [SRC.vocab.stoi[i] for i in sentence]
+        src_tensor = torch.LongTensor([index]).T.to(device)
+        trg = torch.LongTensor([[TRG.vocab.stoi[TRG.init_token]]]).to(device)
+        for i in range(25):
+            pred = model(src_tensor, trg)
+
+            pred_index = pred.argmax(2)[-1].item()
+            # print(pred_index)
+            output.append(pred_index)
+            if pred_index == TRG.vocab.stoi[TRG.eos_token]:
+                break
+
+            pred_index = torch.LongTensor([[pred_index]]).to(device)
+            # print(pred_index.size())
+            trg = torch.cat((trg, pred_index))
+        
+        print("source sentence: ", sentence)
+        print("output sentence: ", [TRG.vocab.itos[i] for i in output])
 
     test_loss = evaluate_model(best_model, test_iter, criterion)
     print('=' * 89)
@@ -347,14 +359,14 @@ def main():
     print("generating sentence from text..")
     path = "../data/test.tsv"
     test_input, test_output, test_pred = [], [], []
-    test_input, test_output, test_pred = gen_sentence_list(model, path, SRC)
+    test_input, test_output, test_pred = gen_sentence_list(model, path, SRC, TRG)
     print(test_pred)
     path = "../data/train.tsv"
     train_input, train_output, train_pred = [], [], []
-    train_input, train_output, train_pred = gen_sentence_list(model, path, SRC)
+    train_input, train_output, train_pred = gen_sentence_list(model, path, SRC, TRG)
     path = "../data/val.tsv"
     val_input, val_output, val_pred = [], [], []
-    val_input, val_output, val_pred = gen_sentence_list(model, path, SRC)
+    val_input, val_output, val_pred = gen_sentence_list(model, path, SRC, TRG)
 
     train_df = convert_list_to_df(train_input, train_output, train_pred)
     val_df = convert_list_to_df(val_input, val_output, val_pred)

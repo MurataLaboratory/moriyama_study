@@ -61,10 +61,10 @@ class TransformerModel(nn.Module):
         return mask
 
     def init_weights(self):
-        initrange = 0.1
-        self.encoder.weight.data.uniform_(-initrange, initrange)
-        #self.decoder.bias.data.zero_()
-        #self.decoder.weight.data.uniform_(-initrange, initrange)
+        # initrange = 0.1
+        # self.encoder.weight.data.uniform_(-initrange, initrange)
+        # self.decoder.bias.data.zero_()
+        # self.decoder.weight.data.uniform_(-initrange, initrange)
 
     def forward(self, src, trg):
         # src_mask = self.generate_square_subsequent_mask(src.size()[0]).to(device)
@@ -286,7 +286,7 @@ def main():
   valid_size = len(dataset) - train_size
   train_data, valid_data = torch.utils.data.random_split(dataset, [train_size, valid_size])
 
-  batch_size = 64
+  batch_size = 32
   train_data_loader = torch.utils.data.DataLoader(train_data, batch_size, shuffle=True)
   valid_data_loader = torch.utils.data.DataLoader(valid_data, batch_size, shuffle=True)
 
