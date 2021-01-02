@@ -49,10 +49,6 @@ def tokenizer(text):
     return [tok for tok in j_t.tokenize(text, wakati=True)]
 
 
-# 重複のないデータセットか重複のあるデータセットを選ぶ
-# flagがTrueの時重複のないデータを返す
-
-
 def choose_dataset(flag, SRC, TRG):
     if flag:
         train, val, test = data.TabularDataset.splits(
