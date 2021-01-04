@@ -296,7 +296,7 @@ def main():
 
     criterion = nn.CrossEntropyLoss(ignore_index=TRG.vocab.stoi["<unk>"])
     lr = 0.0001  # learning rate
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1.0, gamma=0.95)
 
     best_val_loss = float("inf")

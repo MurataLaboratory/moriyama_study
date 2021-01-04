@@ -86,6 +86,12 @@ class Encoder(nn.Module):
         # LSTMに単語を入力して、Encoderからの出力とする
         outputs, (hidden, cell) = self.rnn(embedded)
         return hidden, cell
+    
+    def gen_prediction(self, src):
+        embedded = self.embedding(src)
+        outputs, (hidden, cell) = self.rnn(embedded)
+
+        return hidden, cell
 
 
 class Decoder(nn.Module):
@@ -243,7 +249,7 @@ def gen_sentence(sentence, src_field, trg_field, model, max_len=50):
     src_tensor = torch.LongTensor(src_index).unsqueeze(1).to(device)
     src_tensor = torch.flip(src_tensor, [0, 1])
     with torch.no_grad():
-        hidden, cell = model.encoder(src_tensor)
+        hidden, cell = model.encoder.gen_prediction(src_tensor)
 
     trg_index = [trg_field.vocab.stoi[trg_field.init_token]]
     for i in range(max_len):
@@ -270,7 +276,7 @@ def gen_sentence(sentence, src_field, trg_field, model, max_len=50):
 def gen_sentence_list(model, path, SRC, TRG):
     col, pred = [], []
     input, output = [], []
-    with open(path, mode='r') as f:
+    with open(path, mode='r', encoding = "utf-8") as f:
         for file_list in f:
             col.append(file_list.split('\t'))
     for i in col:
@@ -332,8 +338,8 @@ def main():
     OUTPUT_DIM = len(TRG.vocab)
     ENC_EMB_DIM = 768
     DEC_EMB_DIM = 768
-    ENC_HID_DIM = 256
-    DEC_HID_DIM = 256
+    ENC_HID_DIM = 1024
+    DEC_HID_DIM = 1024
     N_LAYERS = 1
     ENC_DROPOUT = 0.3
     DEC_DROPOUT = 0.3
@@ -382,7 +388,6 @@ def main():
     torch.save(model.state_dict(), '../model/seq2seq.pth')
 
     # model.state_dict(torch.load("../model/seq2seq.pth"))
-    print(model.state_dict())
     print("generating sentence...")
     path = "../data/test.tsv"
     test_input, test_output, test_pred = gen_sentence_list(

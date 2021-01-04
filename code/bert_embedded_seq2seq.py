@@ -83,6 +83,12 @@ class Encoder(nn.Module):
         outputs, (hidden, cell) = self.rnn(embedded)
         return hidden, cell
 
+    def gen_prediction(self, src):
+        embedded = self.embedding(src)
+        outputs, (hidden, cell) = self.rnn(embedded)
+
+        return hidden, cell
+
 
 class Decoder(nn.Module):
     def __init__(self, output_dim, emb_dim, hid_dim, n_layers, dropout):
@@ -252,7 +258,7 @@ def gen_sentence(sentence, tok, model, max_len=50):
     # print(src.size())
     # src_tensor = model.encoder(src)
     with torch.no_grad():
-        hidden, cell = model.encoder(src_tensor)
+        hidden, cell = model.encoder.gen_prediction(src_tensor)
 
     trg_index = [tok.convert_tokens_to_ids("[CLS]")]
     for i in range(max_len):
@@ -332,9 +338,9 @@ def main():
         src.append(sentence[0])
         trg.append(sentence[1].replace("\n", ""))
 
-    src_tensors = tok.__call__(text=src, text_pair=trg, padding=True,
+    src_tensors = tok(text=src, text_pair=trg, padding=True,
                                return_tensors='pt', return_attention_mask=False)
-    trg_tensors = tok.__call__(text=trg, text_pair=src, padding=True,
+    trg_tensors = tok(text=trg, text_pair=src, padding=True,
                                return_tensors='pt', return_attention_mask=False)
 
     dataset = torch.utils.data.TensorDataset(src_tensors['input_ids'],
@@ -355,8 +361,8 @@ def main():
     # OUTPUT_DIM = 3454
     ENC_EMB_DIM = 768
     DEC_EMB_DIM = 768
-    ENC_HID_DIM = 256
-    DEC_HID_DIM = 256
+    ENC_HID_DIM = 1024
+    DEC_HID_DIM = 1024
     N_LAYERS = 1
     ENC_DROPOUT = 0.3
     DEC_DROPOUT = 0.3
