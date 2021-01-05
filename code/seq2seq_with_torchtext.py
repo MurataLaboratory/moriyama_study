@@ -86,12 +86,6 @@ class Encoder(nn.Module):
         # LSTMに単語を入力して、Encoderからの出力とする
         outputs, (hidden, cell) = self.rnn(embedded)
         return hidden, cell
-    
-    def gen_prediction(self, src):
-        embedded = self.embedding(src)
-        outputs, (hidden, cell) = self.rnn(embedded)
-
-        return hidden, cell
 
 
 class Decoder(nn.Module):
@@ -120,15 +114,6 @@ class Decoder(nn.Module):
         output, (hidden, cell) = self.rnn(embedded, (hidden, cell))
         # 正規化する
         prediction = self.fc_out(output.squeeze(0))
-
-        return prediction, hidden, cell
-
-    def gen_prediction(self, input, hidden, cell):
-        embedded = self.embedding(input)
-        # print(embedded.size())
-        output, (hidden, cell) = self.rnn(embedded, (hidden, cell))
-        # print(output.squeeze(1).size())
-        prediction = self.fc_out(output.squeeze(1))
 
         return prediction, hidden, cell
 
@@ -189,8 +174,8 @@ def train_model(model, iterator, optimizer, criterion, clip):
         #print("output size:", output.size())
         #print("target size:", trg.size())
         output_dim = output.shape[-1]
-        output = output[:].view(-1, output_dim)
-        trg = trg[:].view(-1)
+        output = output[1:].view(-1, output_dim)
+        trg = trg[1:].view(-1)
         # print("output size", output.size())
         # print("trg size: ", trg.size())
         loss = criterion(output, trg)
@@ -223,8 +208,8 @@ def evaluate_model(model, iterator, criterion):
 
             output_dim = output.shape[-1]
 
-            output = output[:].view(-1, output_dim)
-            trg = trg[:].view(-1)
+            output = output[1:].view(-1, output_dim)
+            trg = trg[1:].view(-1)
 
             loss = criterion(output, trg)
             epoch_loss += loss.item()
@@ -249,14 +234,14 @@ def gen_sentence(sentence, src_field, trg_field, model, max_len=50):
     src_tensor = torch.LongTensor(src_index).unsqueeze(1).to(device)
     src_tensor = torch.flip(src_tensor, [0, 1])
     with torch.no_grad():
-        hidden, cell = model.encoder.gen_prediction(src_tensor)
+        hidden, cell = model.encoder(src_tensor)
 
     trg_index = [trg_field.vocab.stoi[trg_field.init_token]]
     for i in range(max_len):
         trg_tensor = torch.LongTensor([trg_index]).to(device)
         trg_tensor = torch.t(trg_tensor)
         with torch.no_grad():
-            output, hidden, cell = model.decoder.gen_prediction(
+            output, hidden, cell = model.decoder(
                 trg_tensor, hidden, cell)
 
         pred_token = output[-1].argmax(0).item()

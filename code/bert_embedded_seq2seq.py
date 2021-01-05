@@ -83,12 +83,6 @@ class Encoder(nn.Module):
         outputs, (hidden, cell) = self.rnn(embedded)
         return hidden, cell
 
-    def gen_prediction(self, src):
-        embedded = self.embedding(src)
-        outputs, (hidden, cell) = self.rnn(embedded)
-
-        return hidden, cell
-
 
 class Decoder(nn.Module):
     def __init__(self, output_dim, emb_dim, hid_dim, n_layers, dropout):
@@ -114,18 +108,6 @@ class Decoder(nn.Module):
         output, (hidden, cell) = self.rnn(embedded, (hidden, cell))
         # print(output.squeeze(1).size())
         prediction = self.fc_out(output.squeeze(0))
-
-        return prediction, hidden, cell
-
-    def gen_prediction(self, input, hidden, cell):
-        # print(type(input))
-        # input = input.unsqueeze(0)
-        # print(input.size())
-        embedded = self.embedding(input)
-        # print(embedded.size())
-        output, (hidden, cell) = self.rnn(embedded, (hidden, cell))
-        # print(output.squeeze(1).size())
-        prediction = self.fc_out(output.squeeze(1))
 
         return prediction, hidden, cell
 
@@ -195,8 +177,8 @@ def train(model, data_loader, optimizer, criterion, clip):
         output = model(src, trg)
 
         output_dim = output.shape[-1]
-        output = output.view(-1, output_dim)
-        trg = trg.contiguous().view(-1)
+        output = output[1:].view(-1, output_dim)
+        trg = trg[1:].contiguous().view(-1)
         loss = criterion(output, trg)
         loss.backward()
         torch.nn.utils.clip_grad_norm(model.parameters(), clip)
@@ -228,8 +210,8 @@ def evaluate(model, data_loader, criterion):
 
             output_dim = output.shape[-1]
 
-            output = output[:].view(-1, output_dim)
-            trg = trg[:].contiguous().view(-1)
+            output = output[1:].view(-1, output_dim)
+            trg = trg[1:].contiguous().view(-1)
 
             loss = criterion(output, trg)
             epoch_loss += loss.item()
@@ -258,7 +240,7 @@ def gen_sentence(sentence, tok, model, max_len=50):
     # print(src.size())
     # src_tensor = model.encoder(src)
     with torch.no_grad():
-        hidden, cell = model.encoder.gen_prediction(src_tensor)
+        hidden, cell = model.encoder(src_tensor)
 
     trg_index = [tok.convert_tokens_to_ids("[CLS]")]
     for i in range(max_len):
@@ -268,7 +250,7 @@ def gen_sentence(sentence, tok, model, max_len=50):
         # print(trg_tensor.size())
         # print(trg_tensor)
         with torch.no_grad():
-            output, hidden, cell = model.decoder.gen_prediction(
+            output, hidden, cell = model.decoder(
                 trg_tensor, hidden, cell)
 
         # print(output.size())
