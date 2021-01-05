@@ -257,7 +257,7 @@ def gen_sentence(sentence, tok, model, max_len=50):
         # print(output)
         # print(output[-1].argmax(0).item())
         pred_token = output[-1].argmax(0).item()
-        
+
         if pred_token == tok.convert_tokens_to_ids("[SEP]"):
             break
         trg_index.append(pred_token)
