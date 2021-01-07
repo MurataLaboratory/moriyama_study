@@ -82,7 +82,7 @@ class Encoder(nn.Module):
 
     def forward(self, src):
         # 単語を分散表現に変換する
-        embedded = self.dropout(self.embedding(src))
+        embedded = self.embedding(src)
         # LSTMに単語を入力して、Encoderからの出力とする
         outputs, (hidden, cell) = self.rnn(embedded)
         return hidden, cell
@@ -107,9 +107,10 @@ class Decoder(nn.Module):
 
     def forward(self, input, hidden, cell):
         # 入力を整形する
-        input = input.unsqueeze(0)
+        # input = input.unsqueeze(0)
         # 分散表現に変換
-        embedded = self.dropout(self.embedding(input))
+        embedded = self.embedding(input).unsqueeze(0)
+        # print(embedded.size())
         # Decoderからの出力を得る
         output, (hidden, cell) = self.rnn(embedded, (hidden, cell))
         # 正規化する
@@ -153,7 +154,7 @@ def init_weights(m):
         nn.init.uniform_(param.data, -0.08, 0.08)
 
 
-def train_model(model, iterator, optimizer, criterion, clip):
+def train_model(model, iterator, optimizer, criterion, clip, TRG):
     model.train()
 
     epoch_loss = 0
@@ -170,7 +171,7 @@ def train_model(model, iterator, optimizer, criterion, clip):
         optimizer.zero_grad()
 
         output = model(src, trg)
-
+        # print(output.argmax(1))
         #print("output size:", output.size())
         #print("target size:", trg.size())
         output_dim = output.shape[-1]
@@ -231,30 +232,36 @@ def gen_sentence(sentence, src_field, trg_field, model, max_len=50):
         tokenizer(sentence) + [src_field.eos_token]
 
     src_index = [src_field.vocab.stoi[i] for i in tokens]
+    src_index = np.flipud(np.array(src_index)).tolist()
     src_tensor = torch.LongTensor(src_index).unsqueeze(1).to(device)
-    src_tensor = torch.flip(src_tensor, [0, 1])
+    # print(src_tensor)
+    # src_tensor = torch.flip(src_tensor, [0, 1])
+    # print(src_tensor.size())
     with torch.no_grad():
         hidden, cell = model.encoder(src_tensor)
 
     trg_index = [trg_field.vocab.stoi[trg_field.init_token]]
     for i in range(max_len):
-        trg_tensor = torch.LongTensor([trg_index]).to(device)
-        trg_tensor = torch.t(trg_tensor)
+        trg_tensor = torch.LongTensor([trg_index[-1]]).to(device)
+        # trg_tensor = torch.t(trg_tensor)
         with torch.no_grad():
-            output, hidden, cell = model.decoder(
-                trg_tensor, hidden, cell)
-
-        pred_token = output[-1].argmax(0).item()
-        trg_index.append(pred_token)
+            # print(trg_tensor.size())
+            output, hidden, cell = model.decoder(trg_tensor, hidden, cell)
+        # print(output)
+        pred_token = output.argmax(1).item()
+        # trg_index = np.array(trg_index).T.tolist()
+        # print(trg_index)
         if pred_token == trg_field.vocab.stoi[trg_field.eos_token]:
             break
 
+        trg_index.append(pred_token)
+
     trg_tokens = [trg_field.vocab.itos[i] for i in trg_index]
-    if len(trg_tokens) == 2:
+    #if len(trg_tokens) == 2:
         # print(trg_tokens)
-        trg_tokens = ["-"]
-        trg_tokens = [src_field.init_token] + \
-            trg_tokens + [src_field.eos_token]
+    #    trg_tokens = ["-"]
+    #    trg_tokens = [src_field.init_token] + \
+    #        trg_tokens + [src_field.eos_token]
     return trg_tokens
 
 
@@ -312,10 +319,9 @@ def main():
     TRG.build_vocab(train)
 
     # 各データをバッチ化する
-    # データの総数を割れる数にしないと学習時にエラーを吐く
-    train_batch_size = 50
+    train_batch_size = 128
     test_batch_size = 32
-    eval_batch_size = 2
+    eval_batch_size = 32
     train_iter, val_iter, test_iter = data.BucketIterator.splits((train, val, test), sort=False,
                                                                  batch_sizes=(train_batch_size, eval_batch_size, test_batch_size), device=device)
 
@@ -342,6 +348,7 @@ def main():
     SRC_PAD_IDX = SRC.vocab.stoi[SRC.pad_token]
 
     criterion = nn.CrossEntropyLoss(ignore_index=SRC_PAD_IDX)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1.0, gamma=0.95)
 
     epochs = 100
     clip = 1
@@ -354,23 +361,24 @@ def main():
 
         start_time = time.time()
 
-        train_loss = train_model(model, train_iter, optimizer, criterion, clip)
+        train_loss = train_model(model, train_iter, optimizer, criterion, clip, TRG)
         valid_loss = evaluate_model(model, val_iter, criterion)
 
+        scheduler.step()
         end_time = time.time()
 
         epoch_mins, epoch_secs = epoch_time(start_time, end_time)
-        """
+
         if valid_loss < best_valid_loss:
             best_valid_loss = valid_loss
             best_model = model
             # torch.save(model.state_dict(), 'tut1-model.pt')
-        """
+
         print("-"*65)
         print(
             f'Epoch: {epoch+1:02} | Time: {epoch_mins}m {epoch_secs}s | Train Loss: {train_loss:.3f} | Val. Loss: {valid_loss:.3f}')
 
-    torch.save(model.state_dict(), '../model/seq2seq.pth')
+    torch.save(best_model.state_dict(), '../model/seq2seq.pth')
 
     # model.state_dict(torch.load("../model/seq2seq.pth"))
     print("generating sentence...")
@@ -388,7 +396,7 @@ def main():
     val_df = convert_list_to_df(val_input, val_output, val_pred)
     test_df = convert_list_to_df(test_input, test_output, test_pred)
 
-    df_s = pd.concat([train_df, test_df]).sort_values('input')
+    df_s = pd.concat([train_df, test_df]).sort_values('input').reset_index().drop(columns = ["index"])
 
     df_s.to_csv(filename)
 

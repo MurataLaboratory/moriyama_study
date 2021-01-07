@@ -100,9 +100,9 @@ class Decoder(nn.Module):
 
     def forward(self, input, hidden, cell):
         # print(type(input))
-        input = input.unsqueeze(0)
+        # input = input.unsqueeze(0)
         # print(input.size())
-        embedded = self.dropout(self.embedding(input))
+        embedded = self.embedding(input).unsqueeze(0)
         # print(embedded.size())
         output, (hidden, cell) = self.rnn(embedded, (hidden, cell))
         # print(output.squeeze(1).size())
@@ -231,7 +231,7 @@ def gen_sentence(sentence, tok, model, max_len=50):
     sentence = tok.tokenize(sentence)
     src = [tok.convert_tokens_to_ids(
         "[CLS]")] + tok.convert_tokens_to_ids(sentence) + [tok.convert_tokens_to_ids("[SEP]")]
-
+    src = np.flipud(np.array(src)).tolist()
     src = torch.LongTensor([src])
     src = torch.t(src)
     src_tensor = src.to(device)
@@ -245,8 +245,8 @@ def gen_sentence(sentence, tok, model, max_len=50):
     trg_index = [tok.convert_tokens_to_ids("[CLS]")]
     for i in range(max_len):
         # print(trg_index)
-        trg_tensor = torch.LongTensor([trg_index]).to(device)
-        trg_tensor = torch.t(trg_tensor)
+        trg_tensor = torch.LongTensor([trg_index[-1]]).to(device)
+        # trg_tensor = torch.t(trg_tensor)
         # print(trg_tensor.size())
         # print(trg_tensor)
         with torch.no_grad():
@@ -256,17 +256,11 @@ def gen_sentence(sentence, tok, model, max_len=50):
         # print(output.size())
         # print(output)
         # print(output[-1].argmax(0).item())
-        pred_token = output[-1].argmax(0).item()
+        pred_token = output.argmax(1).item()
 
         if pred_token == tok.convert_tokens_to_ids("[SEP]"):
             break
         trg_index.append(pred_token)
-
-    if len(trg_index) == 2:
-        # print(trg_index)
-        trg_index = ["-"]
-        trg_index = [tok.convert_tokens_to_ids(
-            "[CLS]")] + trg_index + [tok.convert_tokens_to_ids("[SEP]")]
 
     predict = tok.convert_ids_to_tokens(trg_index)
     predit = "".join(predict)
@@ -276,7 +270,7 @@ def gen_sentence(sentence, tok, model, max_len=50):
 def gen_sentence_list(model, path, tok):
     col, pred = [], []
     input, output = [], []
-    with open(path, mode='r') as f:
+    with open(path, mode='r', encoding = "utf-8") as f:
         for file_list in f:
             col.append(file_list.split('\t'))
     for i in col:
@@ -333,7 +327,7 @@ def main():
     train_data, valid_data = torch.utils.data.random_split(
         dataset, [train_size, valid_size])
 
-    batch_size = 32
+    batch_size = 64
     train_data_loader = torch.utils.data.DataLoader(
         train_data, batch_size, shuffle=True)
     valid_data_loader = torch.utils.data.DataLoader(
@@ -358,10 +352,10 @@ def main():
     model = Seq2Seq(enc, dec, device).to(device)
 
     print(model)
-    model.apply(init_weights)
+    # model.apply(init_weights)
 
     optimizer = optim.Adam(model.parameters())
-
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1.0, gamma=0.95)
     criterion = nn.CrossEntropyLoss(ignore_index=0)
 
     epochs = 100
@@ -378,6 +372,7 @@ def main():
                            optimizer, criterion, clip)
         valid_loss = evaluate(model, valid_data_loader, criterion)
 
+        scheduler.step()
         end_time = time.time()
 
         epoch_mins, epoch_secs = epoch_time(start_time, end_time)
@@ -411,7 +406,7 @@ def main():
     val_df = convert_list_to_df(val_input, val_output, val_pred)
     test_df = convert_list_to_df(test_input, test_output, test_pred)
 
-    df_s = pd.concat([train_df, test_df])
+    df_s = pd.concat([train_df, test_df]).sort_values('input').reset_index().drop(columns = ["index"])
     df_s = df_s.sort_values("input")
 
     df_s.to_csv("../csv/result_bert_embedded_seq2seq.csv")

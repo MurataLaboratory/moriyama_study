@@ -756,3 +756,16 @@ Transformerのバグ取り
 学習させる
 
 </details>
+
+<details>
+<summary>01/07</summary>
+
+- 今日したこと
+
+モデルの学習
+
+- これからすること
+
+seq2seqで空白文字が出るのでプログラムを見直す
+
+</details>

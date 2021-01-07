@@ -53,7 +53,6 @@ class TransformerModel(nn.Module):
                                                       nlayers
                                                       ,norm=decoder_norm)
         self.linear = bert_model.get_output_embeddings()
-        self.init_weights()
 
     def generate_square_subsequent_mask(self, sz):
         mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)
@@ -61,7 +60,7 @@ class TransformerModel(nn.Module):
         return mask
 
     def init_weights(self):
-        # initrange = 0.1
+        initrange = 0.1
         # self.encoder.weight.data.uniform_(-initrange, initrange)
         # self.decoder.bias.data.zero_()
         # self.decoder.weight.data.uniform_(-initrange, initrange)
@@ -81,7 +80,7 @@ class TransformerModel(nn.Module):
         # print("enc output size: ", enc_output.size())
         # print("trg size: ", trg.size())
         # デコーダにエンコーダの出力を入れる（ここがおかしい）
-        output = self.transformer_decoder(trg, enc_output,tgt_mask = trg_mask)
+        output = self.transformer_decoder(trg, enc_output, tgt_mask = trg_mask)
         output = self.linear(output)
         return output
 
@@ -286,13 +285,13 @@ def main():
   valid_size = len(dataset) - train_size
   train_data, valid_data = torch.utils.data.random_split(dataset, [train_size, valid_size])
 
-  batch_size = 32
+  batch_size = 64
   train_data_loader = torch.utils.data.DataLoader(train_data, batch_size, shuffle=True)
   valid_data_loader = torch.utils.data.DataLoader(valid_data, batch_size, shuffle=True)
 
   print("building model...")
   emsize = 768 # embedding dimension
-  nhid = 512 # the dimension of the feedforward network model in nn.TransformerEncoder
+  nhid = 1024 # the dimension of the feedforward network model in nn.TransformerEncoder
   nlayers = 1 # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder
   nhead = 2 # the number of heads in the multiheadattention models
   dropout = 0.3 # the dropout value
@@ -347,7 +346,8 @@ def main():
           last_index = torch.LongTensor([[pred_word_index.item()]]).to(device)
           trg = torch.cat((trg, last_index))
       predict = tok.convert_ids_to_tokens(output)
-      print(predict)
+      print("source sentence: ", sentence)
+      print("predicted sentence: ", predict)
       scheduler.step()
 
   torch.save(best_model.state_dict(), "../model/bert_embedded_transformer.pth")
@@ -372,7 +372,7 @@ def main():
   val_df = convert_list_to_df(val_input, val_output, val_pred)
   test_df = convert_list_to_df(test_input, test_output, test_pred)
 
-  df_s = pd.concat([train_df, test_df]).sort_values('input')
+  df_s = pd.concat([train_df, test_df]).sort_values('input').reset_index().drop(columns = ["index"])
 
   print(df_s.head(10))
 

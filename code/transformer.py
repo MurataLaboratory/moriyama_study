@@ -53,10 +53,9 @@ class TransformerModel(nn.Module):
         self.decoder_embedding = nn.Embedding(out_token, ninp)
         self.ninp = ninp
         decoder_norm = nn.LayerNorm(ninp)
-        self.linear = nn.Linear(ninp, out_token)
         decoder_layers = TransformerDecoderLayer(ninp, nhead, nhid, dropout)
         self.transformer_decoder = TransformerDecoder(decoder_layers, nlayers, norm = decoder_norm)
-
+        self.linear = nn.Linear(ninp, out_token)
         self.init_weights()
 
     def generate_square_subsequent_mask(self, sz):
@@ -367,7 +366,7 @@ def main():
     val_df = convert_list_to_df(val_input, val_output, val_pred)
     test_df = convert_list_to_df(test_input, test_output, test_pred)
 
-    df_s = pd.concat([train_df, test_df]).sort_values('input')
+    df_s = pd.concat([train_df, test_df]).sort_values('input').reset_index().drop(columns = ["index"])
 
     df_s.to_csv(filename)
 
