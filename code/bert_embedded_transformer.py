@@ -20,7 +20,7 @@ bert_model = BertForPreTraining.from_pretrained(
       output_attentions = False, # アテンションベクトルを出力するか
       output_hidden_states = True, # 隠れ層を出力するか
   )
-"""
+
 def get_freer_gpu():
     os.system('nvidia-smi -q -d Memory |grep -A4 GPU|grep Free >tmp')
     memory_available = [int(x.split()[2]) for x in open('tmp', 'r').readlines()]
@@ -28,9 +28,9 @@ def get_freer_gpu():
 
 # 必要なモジュールのインポート
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu", index=get_freer_gpu())
-"""
+
 # device = torch.device("cpu")
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class TransformerModel(nn.Module):
 
