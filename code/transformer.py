@@ -84,7 +84,6 @@ class TransformerModel(nn.Module):
         trg = self.decoder_embedding(trg)
         trg = self.pos_encoder(trg)
         output = self.transformer_decoder(trg, output,tgt_mask = trg_mask)
-        # softmaxで正規化するようにする
         output = self.linear(output)
 
         return output
@@ -274,7 +273,7 @@ def main():
     SRC.build_vocab(train, min_freq=1)
     TRG.build_vocab(train, min_freq=1)
 
-    train_batch_size = 32
+    train_batch_size = 128
     test_batch_size = 32
     eval_batch_size = 32
     train_iter, val_iter, test_iter = data.BucketIterator.splits((train, val, test), sort=False,  batch_sizes=(
@@ -288,8 +287,7 @@ def main():
     nlayers = 1  # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder and nn.TransformerDecoder
     nhead = 2  # the number of heads in the multiheadattention models
     dropout = 0.3  # the dropout value
-    model = TransformerModel(in_tokens, out_tokens, emsize, nhead,
-                             nhid, nlayers, dropout).to(device)
+    model = TransformerModel(in_tokens, out_tokens, emsize, nhead, nhid, nlayers, dropout).to(device)
 
     print(model)
 

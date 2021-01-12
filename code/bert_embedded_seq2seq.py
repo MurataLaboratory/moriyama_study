@@ -78,7 +78,7 @@ class Encoder(nn.Module):
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, src):
-        embedded = self.dropout(self.embedding(src))
+        embedded = self.embedding(src)
         outputs, (hidden, cell) = self.rnn(embedded)
         return hidden, cell
 
@@ -105,7 +105,7 @@ class Decoder(nn.Module):
         embedded = self.embedding(input).unsqueeze(0)
         # print(embedded.size())
         output, (hidden, cell) = self.rnn(embedded, (hidden, cell))
-        # print(output.squeeze(1).size())
+        # print(output.squeeze(0).size())
         prediction = self.fc_out(output.squeeze(0))
 
         return prediction, hidden, cell
@@ -209,7 +209,7 @@ def evaluate(model, data_loader, criterion):
 
             output_dim = output.shape[-1]
 
-            output = output[1:].view(-1, output_dim)
+            output = output[1:].contiguous().view(-1, output_dim)
             trg = trg[1:].contiguous().view(-1)
 
             loss = criterion(output, trg)
@@ -235,7 +235,8 @@ def gen_sentence(sentence, tok, model, max_len=50):
     src = torch.LongTensor([src])
     src = torch.t(src)
     src_tensor = src.to(device)
-    src_tensor = torch.flip(src_tensor, [0, 1])
+    # print(src_tensor)
+    # src_tensor = torch.flip(src_tensor, [0, 1])
     # print(src)
     # print(src.size())
     # src_tensor = model.encoder(src)
@@ -260,10 +261,11 @@ def gen_sentence(sentence, tok, model, max_len=50):
 
         if pred_token == tok.convert_tokens_to_ids("[SEP]"):
             break
+
         trg_index.append(pred_token)
 
     predict = tok.convert_ids_to_tokens(trg_index)
-    predit = "".join(predict)
+    predict = "".join(predict).replace("[CLS]", "")
     return predict
 
 
@@ -302,22 +304,23 @@ def convert_list_to_df(input, output, pred_list):
 def main():
 
     print("preparing data...")
-    path = "../data/data.tsv"
+    paths = ["../data/train.tsv", "../data/val.tsv"]
     src, trg, tmp = [], [], []
-    with open(path, mode='r', encoding="utf-8") as f:
-        for file in f:
-            sentence = file.split("\t")
-            tmp.append(sentence)
+    for path in paths:
+        with open(path, mode='r', encoding="utf-8") as f:
+            for file in f:
+                sentence = file.split("\t")
+                tmp.append(sentence)
 
-    random.shuffle(tmp)
+    # random.shuffle(tmp)
 
     for sentence in tmp:
         src.append(sentence[0])
         trg.append(sentence[1].replace("\n", ""))
 
-    src_tensors = tok(text=src, text_pair=trg, padding=True,
+    src_tensors = tok(text=src, padding=True,
                                return_tensors='pt', return_attention_mask=False)
-    trg_tensors = tok(text=trg, text_pair=src, padding=True,
+    trg_tensors = tok(text=trg, padding=True,
                                return_tensors='pt', return_attention_mask=False)
 
     dataset = torch.utils.data.TensorDataset(src_tensors['input_ids'],
@@ -329,9 +332,9 @@ def main():
 
     batch_size = 64
     train_data_loader = torch.utils.data.DataLoader(
-        train_data, batch_size, shuffle=True)
+        train_data, batch_size)
     valid_data_loader = torch.utils.data.DataLoader(
-        valid_data, batch_size, shuffle=True)
+        valid_data, batch_size)
 
     print("building model...")
     OUTPUT_DIM = tok.vocab_size
@@ -364,6 +367,7 @@ def main():
     best_model = None
 
     print("training...")
+
     for epoch in range(epochs):
 
         start_time = time.time()
@@ -376,16 +380,16 @@ def main():
         end_time = time.time()
 
         epoch_mins, epoch_secs = epoch_time(start_time, end_time)
-        """
+
         if valid_loss < best_valid_loss:
             best_valid_loss = valid_loss
             best_model = model
-        """
+
         print("-"*65)
         print(
             f'Epoch: {epoch+1:02} | Time: {epoch_mins}m {epoch_secs}s | Train Loss: {train_loss:.3f} | Val. Loss: {valid_loss:.3f} |')
 
-    torch.save(model.state_dict(),
+    torch.save(best_model.state_dict(),
                '../model/bert_embedded_seq2seq.pth')
     # model.apply(init_weights)
 

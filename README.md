@@ -769,3 +769,16 @@ Transformerのバグ取り
 seq2seqで空白文字が出るのでプログラムを見直す
 
 </details>
+
+<details>
+<summary>01/12</summary>
+
+- 今日したこと
+
+出力分がおかしかったのでdateloaderを見直したら、バグを見つけた。修正して学習し直す
+
+- これからすること
+
+概要を書く
+
+</details>

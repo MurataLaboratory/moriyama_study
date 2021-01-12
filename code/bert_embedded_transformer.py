@@ -36,8 +36,6 @@ class TransformerModel(nn.Module):
 
     def __init__(self, ninp, nhead, nhid, nlayers, dropout=0.5):
         super(TransformerModel, self).__init__()
-        if ninp%2 == 1:
-          ninp += 1
         self.model_type = 'Transformer'
         # self.linear = nn.Linear(32000 ,768)
         self.pos_encoder = PositionalEncoding(ninp, dropout)
@@ -45,7 +43,8 @@ class TransformerModel(nn.Module):
         encoder_layers = TransformerEncoderLayer(ninp, nhead, nhid, dropout)
         self.transformer_encoder = TransformerEncoder(encoder_layers,
                                                       nlayers, norm = encoder_norm)
-        self.encoder = bert_model.get_input_embeddings()
+        self.encoder_embedding = bert_model.get_input_embeddings()
+        self.decoder_embedding = bert_model.get_input_embeddings()
         self.ninp = ninp
         decoder_norm = nn.LayerNorm(ninp)
         decoder_layers = TransformerDecoderLayer(ninp, nhead, nhid, dropout)
@@ -69,19 +68,20 @@ class TransformerModel(nn.Module):
         # src_mask = self.generate_square_subsequent_mask(src.size()[0]).to(device)
         trg_mask = self.generate_square_subsequent_mask(trg.size()[0]).to(device)
         # 分散表現に変換
-        src = self.encoder(src)
-        trg = self.encoder(trg)
+        src = self.encoder_embedding(src)
         # 位置情報を入れる
         src = self.pos_encoder(src)
-        trg = self.pos_encoder(trg)
         # モデルにデータを入れる
         enc_output = self.transformer_encoder(src)
         # enc_output = self.linear(enc_output)
         # print("enc output size: ", enc_output.size())
         # print("trg size: ", trg.size())
         # デコーダにエンコーダの出力を入れる（ここがおかしい）
+        trg = self.decoder_embedding(trg)
+        trg = self.pos_encoder(trg)
         output = self.transformer_decoder(trg, enc_output, tgt_mask = trg_mask)
         output = self.linear(output)
+
         return output
 
 class PositionalEncoding(nn.Module):
@@ -89,7 +89,7 @@ class PositionalEncoding(nn.Module):
     def __init__(self, d_model, dropout=0.1, max_len=5000):
         super(PositionalEncoding, self).__init__()
         self.dropout = nn.Dropout(p=dropout)
-
+        self.d_model = d_model
         pe = torch.zeros(max_len, d_model)
         position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
         div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
@@ -100,6 +100,7 @@ class PositionalEncoding(nn.Module):
 
     def forward(self, x):
         # print(x.size())
+        x = x * math.sqrt(self.d_model)
         x = x + self.pe[:x.size(0), :]
         return self.dropout(x)
 
@@ -107,16 +108,36 @@ class PositionalEncoding(nn.Module):
 
 tok = BertJapaneseTokenizer.from_pretrained('cl-tohoku/bert-base-japanese')
 
+SEED = 1234
+
+random.seed(SEED)
+np.random.seed(SEED)
+torch.manual_seed(SEED)
+torch.cuda.manual_seed(SEED)
+torch.backends.cudnn.deterministic = True
 
 def tokenizer(text):
   return tok.tokenize(text)
 
-def cut_tensor(tensor):
+def cut_src_tensor(tensor):
+  for index, padded_tensor in enumerate(tensor):
+    # print(padded_tensor.size(0))
+    for num, i in enumerate(padded_tensor):
+      if i == 3:
+        padded_tensor[num] = 0
+    sum_pad = sum(0 == padded_tensor).item()
+    if sum_pad == padded_tensor.size(0):
+      break
+  # print(tensor[:index])
+  return tensor[:index]
+
+def cut_trg_tensor(tensor):
   for index, padded_tensor in enumerate(tensor):
     # print(padded_tensor.size(0))
     sum_pad = sum(0 == padded_tensor).item()
     if sum_pad == padded_tensor.size(0):
       break
+  # print(tensor[:index])
   return tensor[:index]
 
 from tqdm import tqdm
@@ -129,16 +150,18 @@ def train(model, data_loader, optimizer, criterion):
     for src, trg in data_loader:
         src = torch.t(src).to(device)[1:]
         trg = torch.t(trg).to(device)
-        src = cut_tensor(src)
-        trg = cut_tensor(trg)
+        src = cut_src_tensor(src)
+        trg = cut_trg_tensor(trg)
+
         # print("src: ", src)
         # print("trg: ", trg)
         trg_input = trg[:-1]
         optimizer.zero_grad()
         output = model(src, trg_input)
+        # print()
         # for index in output.argmax(2):
-        #   print(tok.convert_ids_to_tokens(index))
-        output = output[:].view(-1, output.shape[-1])
+        #    print(tok.convert_ids_to_tokens(index))
+        output = output[:].contiguous().view(-1, output.shape[-1])
         trg = trg[1:].contiguous().view(-1)
         # print("trg: ", trg)
         # print("trg size :", trg.size())
@@ -148,7 +171,7 @@ def train(model, data_loader, optimizer, criterion):
         torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
         optimizer.step()
 
-        total_loss += loss.item()
+        total_loss += loss.item() * len(src)
 
     return total_loss / len(data_loader)
 
@@ -160,58 +183,47 @@ def evaluate(eval_model, data_loader, criterion):
       for src, trg in data_loader:
         src = torch.t(src).to(device)[1:]
         trg = torch.t(trg).to(device)
-        src = cut_tensor(src)
-        trg = cut_tensor(trg)
+        src = cut_src_tensor(src)
+        trg = cut_trg_tensor(trg)
         #src_mask = model.generate_square_subsequent_mask(data.shape[0]).to(device)
         trg_input = trg[:-1]
         output = eval_model(src, trg_input)
-        output_flat = output[:].view(-1, output.shape[-1])
+        output_flat = output[:].contiguous().view(-1, output.shape[-1])
         trg = trg[1:].contiguous().view(-1)
-        total_loss += criterion(output_flat, trg).item()
+        total_loss += criterion(output_flat, trg).item() * len(src)
     return total_loss / (len(data_loader) - 1)
 
 def gen_sentence(sentence, tok, model, max_len = 50):
   model.eval()
-  # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
   sentence = tok.tokenize(sentence)
-  src = tok.convert_tokens_to_ids(sentence) + [tok.convert_tokens_to_ids("[SEP]")]
+  # src = [tok.convert_tokens_to_ids("[CLS]")] + tok.convert_tokens_to_ids(sentence) + [tok.convert_tokens_to_ids("[SEP]")]
+  src = tok.convert_tokens_to_ids(sentence)#  + [tok.convert_tokens_to_ids("[SEP]")]
   src = torch.LongTensor([src])
-  # print(src)
   src = torch.t(src)
   src = src.to(device)
-
-  # src_tensor = model.encoder(src)
-  # src_tensor = model.pos_encoder(src_tensor).to(device)
-  # src_mask = model.generate_square_subsequent_mask(src_tensor.size()[0]).to(device)
-  # print(src_tensor)
-  # with torch.no_grad():
-  #   src_output = model.transformer_encoder(src_tensor, src_mask)
+  # print(src)
   trg = tok.convert_tokens_to_ids("[CLS]")
   trg = torch.LongTensor([[trg]]).to(device)
   output = []
   # print("src sizse: ", src_output.size())
   for i in range(max_len):
-    # print("trg size: ", trg.size())
-    # print(tok.convert_ids_to_tokens(trg))
-    # trg_tensor = model.encoder(trg)
-    # print(trg_tensor.size())
-    # trg_tensor = model.pos_encoder(trg_tensor).to(device)
     with torch.no_grad():
       pred = model(src, trg)
     # print("predicit sizes: ", pred.size())
     pred_word_index = pred.argmax(2)[-1]
     # add_word = trg_field.vocab.itos[pred_word_index.item()]
     # print(tok.convert_ids_to_tokens(pred_word_index))
-    output.append(pred_word_index)
     if pred_word_index == 3:
       break
+
+    output.append(pred_word_index)
 
     last_index = torch.LongTensor([[pred_word_index.item()]]).to(device)
     trg = torch.cat((trg, last_index))
   # predict = "".join(output)
   predict = tok.convert_ids_to_tokens(output)
-  predit = "".join(predict)
+  predict = "".join(predict)
   # print(predict)
   return predict
 
@@ -263,21 +275,21 @@ def main():
 
 
   print("preparing data..")
-  path = "../data/data.tsv"
+  paths = ["../data/train.tsv", "../data/val.tsv"]
   src, trg, tmp = [], [], []
-  with open(path, mode='r', encoding = "utf-8") as f:
-    for file in f:
-      sentence = file.split("\t")
-      tmp.append(sentence)
+  for path in paths:
+    with open(path, mode='r', encoding = "utf-8") as f:
+      for file in f:
+        sentence = file.split("\t")
+        tmp.append(sentence)
 
-  random.shuffle(tmp)
-
+  # random.shuffle(tmp)
   for sentence in tmp:
       src.append(sentence[0])
       trg.append(sentence[1].replace("\t", ""))
 
-  src_tensors = tok(text = src, text_pair = trg, padding=True, return_tensors='pt', return_attention_mask=False)
-  trg_tensors = tok(text = trg, text_pair = src, padding=True, return_tensors='pt', return_attention_mask=False)
+  src_tensors = tok(text = src, padding=True, return_tensors='pt', return_attention_mask=False)
+  trg_tensors = tok(text = trg, padding=True, return_tensors='pt', return_attention_mask=False)
 
   dataset = torch.utils.data.TensorDataset(src_tensors['input_ids'], trg_tensors['input_ids'])
 
@@ -286,8 +298,9 @@ def main():
   train_data, valid_data = torch.utils.data.random_split(dataset, [train_size, valid_size])
 
   batch_size = 64
-  train_data_loader = torch.utils.data.DataLoader(train_data, batch_size, shuffle=True)
-  valid_data_loader = torch.utils.data.DataLoader(valid_data, batch_size, shuffle=True)
+  # batch_size = 8
+  train_data_loader = torch.utils.data.DataLoader(train_data, batch_size)
+  valid_data_loader = torch.utils.data.DataLoader(valid_data, batch_size)
 
   print("building model...")
   emsize = 768 # embedding dimension
@@ -298,14 +311,14 @@ def main():
   model = TransformerModel(emsize, nhead, nhid, nlayers, dropout).to(device)
 
   print(model)
-  criterion = nn.CrossEntropyLoss()
+  criterion = nn.CrossEntropyLoss(ignore_index=tok.convert_tokens_to_ids("[UNK]"))
   lr = 0.0001 # learning rate
-  optimizer = torch.optim.SGD(model.parameters(), lr=lr)
+  optimizer = torch.optim.Adam(model.parameters(), lr=lr)
   scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1.0, gamma=0.95)
 
 
   best_val_loss = float("inf")
-  epochs = 100 # The number of epochs
+  epochs = 10 # The number of epochs
   best_model = None
   model.init_weights()
   train_loss_list, eval_loss_list = [], []
@@ -328,7 +341,8 @@ def main():
       model.eval()
       sentence = "今日は良い日ですね"
       sentence = tok.tokenize(sentence)
-      src = tok.convert_tokens_to_ids(sentence) + [tok.convert_tokens_to_ids("[SEP]")]
+      # src = [tok.convert_tokens_to_ids("[CLS]")] + tok.convert_tokens_to_ids(sentence) + [tok.convert_tokens_to_ids("[SEP]")]
+      src = tok.convert_tokens_to_ids(sentence)# + [tok.convert_tokens_to_ids("[SEP]")]
       src = torch.LongTensor([src])
       src = torch.t(src)
       src = src.to(device)
@@ -354,7 +368,7 @@ def main():
 
   # model.init_weights()
 
-  model.state_dict(torch.load("../model/bert_embedded_transformer.pth"))
+  # model.state_dict(torch.load("../model/bert_embedded_transformer.pth"))
 
   print("generating sentence from text..")
   path = "../data/test.tsv"
