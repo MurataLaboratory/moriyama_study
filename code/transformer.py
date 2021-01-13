@@ -194,7 +194,7 @@ def gen_sentence(sentence, src_field, trg_field, model, max_len = 50):
     # tokens = [src_field.init_token] + \
     #    tokenizer(sentence) + [src_field.eos_token]
     tokens = tokenizer(sentence)
-    src = [src_field.vocab.stoi[i] for i in tokens]
+    src = [src_field.vocab.soti[src_field.init_token]] + [src_field.vocab.stoi[i] for i in tokens] + [src_field.vocab.stoi[src_field.eos_token]]
     src = torch.LongTensor([src])
     src = torch.t(src)
     src = src.to(device)
@@ -264,14 +264,16 @@ def convert_list_to_df(in_list, out_list, pred_list):
 def main():
     print("preparing data...")
     SRC = data.Field(tokenize=tokenizer,
-                     lower=True)
+                    init_token='<sos>',
+                    eos_token='<eos>',
+                    lower=True)
     TRG = data.Field(tokenize=tokenizer,
                     init_token='<sos>',
                     eos_token='<eos>',
                     lower=True)
     train, val, test, filename = choose_dataset(False, SRC, TRG)
-    SRC.build_vocab(train, min_freq=1)
-    TRG.build_vocab(train, min_freq=1)
+    SRC.build_vocab(train)
+    TRG.build_vocab(train)
 
     train_batch_size = 128
     test_batch_size = 32
@@ -293,7 +295,7 @@ def main():
 
     criterion = nn.CrossEntropyLoss(ignore_index=TRG.vocab.stoi["<unk>"])
     lr = 0.0001  # learning rate
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1.0, gamma=0.95)
 
     best_val_loss = float("inf")
@@ -320,7 +322,7 @@ def main():
         output = []
         sentence = SRC.preprocess(sentence)
         # print(sentence)
-        index = [SRC.vocab.stoi[i] for i in sentence]
+        index = [SRC.vocab.stoi[SRC.init_token]] + [SRC.vocab.stoi[i] for i in sentence] + [SRC.vocab.stoi[SRC.eos_token]]
         src_tensor = torch.LongTensor([index]).T.to(device)
         trg = torch.LongTensor([[TRG.vocab.stoi[TRG.init_token]]]).to(device)
         for i in range(25):
