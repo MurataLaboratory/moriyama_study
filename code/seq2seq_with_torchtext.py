@@ -406,7 +406,7 @@ def main():
 
     percentage, kinds, bleu = eval_score(df_result)
     print(f"一致率: {percentage}, 種類数: {kinds}, BLEU: {bleu}")
-    with open("score_seq2seq.txt", mode="w") as f:
+    with open("score/score_seq2seq.txt", mode="w") as f:
         f.write(f"一致率: {percentage}, 種類数: {kinds}, BLEU: {bleu}")
     print("done!")
 
