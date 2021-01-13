@@ -411,7 +411,6 @@ def main():
     test_df = convert_list_to_df(test_input, test_output, test_pred)
 
     df_s = pd.concat([train_df, test_df]).sort_values('input').reset_index().drop(columns = ["index"])
-    df_s = df_s.sort_values("input")
 
     df_s.to_csv("../csv/result_bert_embedded_seq2seq.csv")
     df_result = df_s.groupby(["input", "predict"], as_index=False).agg({

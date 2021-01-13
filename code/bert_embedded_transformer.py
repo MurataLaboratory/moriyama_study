@@ -318,7 +318,7 @@ def main():
 
 
   best_val_loss = float("inf")
-  epochs = 10 # The number of epochs
+  epochs = 100 # The number of epochs
   best_model = None
   model.init_weights()
   train_loss_list, eval_loss_list = [], []
