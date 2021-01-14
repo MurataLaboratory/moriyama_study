@@ -297,7 +297,7 @@ def main():
   valid_size = len(dataset) - train_size
   train_data, valid_data = torch.utils.data.random_split(dataset, [train_size, valid_size])
 
-  batch_size = 64
+  batch_size = 128
   # batch_size = 8
   train_data_loader = torch.utils.data.DataLoader(train_data, batch_size)
   valid_data_loader = torch.utils.data.DataLoader(valid_data, batch_size)
@@ -318,7 +318,7 @@ def main():
 
 
   best_val_loss = float("inf")
-  epochs = 100 # The number of epochs
+  epochs = 200 # The number of epochs
   best_model = None
   model.init_weights()
   train_loss_list, eval_loss_list = [], []

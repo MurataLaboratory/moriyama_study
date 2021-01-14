@@ -191,10 +191,10 @@ def evaluate_model(eval_model, data_source, criterion):
 def gen_sentence(sentence, src_field, trg_field, model, max_len = 50):
     model.eval()
 
-    # tokens = [src_field.init_token] + \
-    #    tokenizer(sentence) + [src_field.eos_token]
+    tokens = [src_field.init_token] + \
+        tokenizer(sentence) + [src_field.eos_token]
     tokens = tokenizer(sentence)
-    src = [src_field.vocab.soti[src_field.init_token]] + [src_field.vocab.stoi[i] for i in tokens] + [src_field.vocab.stoi[src_field.eos_token]]
+    src = [src_field.vocab.stoi[i] for i in tokens]
     src = torch.LongTensor([src])
     src = torch.t(src)
     src = src.to(device)
@@ -277,7 +277,7 @@ def main():
 
     train_batch_size = 128
     test_batch_size = 32
-    eval_batch_size = 32
+    eval_batch_size = 128
     train_iter, val_iter, test_iter = data.BucketIterator.splits((train, val, test), sort=False,  batch_sizes=(
         train_batch_size, eval_batch_size, test_batch_size), device=device)
 
@@ -299,7 +299,7 @@ def main():
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1.0, gamma=0.95)
 
     best_val_loss = float("inf")
-    epochs = 100  # The number of epochs
+    epochs = 200  # The number of epochs
     best_model = None
     # model.init_weights()
     print("training...")
@@ -337,7 +337,7 @@ def main():
             pred_index = torch.LongTensor([[pred_index]]).to(device)
             # print(pred_index.size())
             trg = torch.cat((trg, pred_index))
-        
+
         print("source sentence: ", sentence)
         print("output sentence: ", [TRG.vocab.itos[i] for i in output])
 
