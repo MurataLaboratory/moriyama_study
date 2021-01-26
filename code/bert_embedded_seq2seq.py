@@ -1,11 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# # 参考文献
-#
-# [Visualizing Bert Embeddings](https://krishansubudhi.github.io/deeplearning/2020/08/27/bert-embeddings-visualization.html)
-
-
 from tqdm import tqdm
 from transformers import BertJapaneseTokenizer, BertForPreTraining
 import pandas as pd
@@ -300,6 +295,24 @@ def convert_list_to_df(input, output, pred_list):
     df = df.sort_values('input')
     return df
 
+def prepare_df(df):
+    ans_df = pd.read_table("../data/data.tsv", header = None, names = ["input", "answer"]).sort_values('input')
+    eval_df = pd.DataFrame(index=[], columns=["input", "answer"])
+    ans_df = ans_df.groupby(["input"], as_index = False).agg({
+        "answer" : list
+    })
+    df = df.groupby(["input", "predict"], as_index = False).agg({
+        "answer" : list
+    })
+    df = df.sort_values("input")
+    # print(df)
+    for _, input_str in enumerate(df["input"]):
+        eval_df = eval_df.append(ans_df[ans_df["input"] == input_str])
+
+    eval_df = eval_df.sort_values("input").reset_index(drop = True)
+    eval_df["predict"] = df["predict"]
+    # print(eval_df)
+    return eval_df
 
 def main():
 
@@ -403,26 +416,21 @@ def main():
     path = "../data/train.tsv"
     train_input, train_output, train_pred = gen_sentence_list(model, path, tok)
 
-    path = "../data/val.tsv"
-    val_input, val_output, val_pred = gen_sentence_list(model, path, tok)
-
     train_df = convert_list_to_df(train_input, train_output, train_pred)
-    val_df = convert_list_to_df(val_input, val_output, val_pred)
     test_df = convert_list_to_df(test_input, test_output, test_pred)
 
-    df_s = pd.concat([train_df, test_df]).sort_values('input').reset_index().drop(columns = ["index"])
-
-    df_s.to_csv("../csv/result_bert_embedded_seq2seq.csv")
-    df_result = df_s.groupby(["input", "predict"], as_index=False).agg({
-        "answer": list
-    })
-
-    percentage, kinds, bleu = eval_score(df_result)
-    print(f"一致率: {percentage}, 種類数: {kinds}, BLEU: {bleu}")
-    with open("./score/score_bert_embedded_seq2seq.txt", mode="w") as f:
-        f.write(f"一致率: {percentage}, 種類数: {kinds}, BLEU: {bleu}")
-
-    print("done!!!")
+    test_df = prepare_df(test_df)
+    test_percentage, test_kinds, test_bleu = eval_score(test_df)
+    train_df = prepare_df(train_df)
+    train_percentage, train_kinds, train_bleu = eval_score(test_df)
+    train_df.to_csv("../csv/train/result_bert_embedded_Seq2seq.csv")
+    test_df.to_csv("../csv/test/result_bert_embedded_Seq2seq.csv")
+    print(f"TEST DATA: 一致率: {test_percentage}, 種類数: {test_kinds}, BLEU: {test_bleu}")
+    print(f"TRAIN DATA: 一致率: {train_percentage}, 種類数: {train_kinds}, BLEU: {train_bleu}")
+    with open("./score/bert_embedded_score_seq2seq.txt", mode="w") as f:
+        f.write(f"TEST DATA: 一致率: {test_percentage}, 種類数: {test_kinds}, BLEU: {test_bleu}")
+        f.write(f"TRAIN DATA: 一致率: {train_percentage}, 種類数: {train_kinds}, BLEU: {train_bleu}")
+    print("done!")
 
 
 if __name__ == "__main__":
