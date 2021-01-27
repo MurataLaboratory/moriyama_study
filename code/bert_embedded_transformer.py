@@ -337,7 +337,7 @@ def main():
 
 
   best_val_loss = float("inf")
-  epochs = 200 # The number of epochs
+  epochs = 100 # The number of epochs
   best_model = None
   model.init_weights()
   train_loss_list, eval_loss_list = [], []
@@ -405,13 +405,13 @@ def main():
   test_df = prepare_df(test_df)
   test_percentage, test_kinds, test_bleu = eval_score(test_df)
   train_df = prepare_df(train_df)
-  train_percentage, train_kinds, train_bleu = eval_score(test_df)
+  train_percentage, train_kinds, train_bleu = eval_score(train_df)
   train_df.to_csv("../csv/train/result_bert_embedded_transformer.csv")
   test_df.to_csv("../csv/test/result_bert_embedded_transformer.csv")
   print(f"TEST DATA: 一致率: {test_percentage}, 種類数: {test_kinds}, BLEU: {test_bleu}")
   print(f"TRAIN DATA: 一致率: {train_percentage}, 種類数: {train_kinds}, BLEU: {train_bleu}")
   with open("./score/score_bert_embedded_transformer.txt", mode="w") as f:
-      f.write(f"TEST DATA: 一致率: {test_percentage}, 種類数: {test_kinds}, BLEU: {test_bleu}")
+      f.write(f"TEST DATA: 一致率: {test_percentage}, 種類数: {test_kinds}, BLEU: {test_bleu}\n")
       f.write(f"TRAIN DATA: 一致率: {train_percentage}, 種類数: {train_kinds}, BLEU: {train_bleu}")
   print("done!")
 

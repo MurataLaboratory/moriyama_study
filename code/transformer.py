@@ -318,7 +318,7 @@ def main():
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1.0, gamma=0.95)
 
     best_val_loss = float("inf")
-    epochs = 200  # The number of epochs
+    epochs = 100  # The number of epochs
     best_model = None
     # model.init_weights()
 
@@ -392,7 +392,7 @@ def main():
     print(f"TEST DATA: 一致率: {test_percentage}, 種類数: {test_kinds}, BLEU: {test_bleu}")
     print(f"TRAIN DATA: 一致率: {train_percentage}, 種類数: {train_kinds}, BLEU: {train_bleu}")
     with open("./score/score_transformer.txt", mode="w") as f:
-        f.write(f"TEST DATA: 一致率: {test_percentage}, 種類数: {test_kinds}, BLEU: {test_bleu}")
+        f.write(f"TEST DATA: 一致率: {test_percentage}, 種類数: {test_kinds}, BLEU: {test_bleu}\n")
         f.write(f"TRAIN DATA: 一致率: {train_percentage}, 種類数: {train_kinds}, BLEU: {train_bleu}")
     print("done!")
 
