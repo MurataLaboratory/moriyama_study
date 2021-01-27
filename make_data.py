@@ -2,7 +2,7 @@ from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 import os
 
-path = "./data/data.tsv"
+path = "./data/data/data.tsv"
 data = []
 with open(path, mode="r", encoding="utf-8") as f:
     for file_list in f:
