@@ -305,7 +305,7 @@ def main():
     out_tokens = len(TRG.vocab.stoi)
     emsize = 768 # embedding dimension
     nhid = 1024 # the dimension of the feedforward network model in nn.TransformerEncoder and nn.TransformerDecoder
-    nlayers = 3  # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder and nn.TransformerDecoder
+    nlayers = 1  # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder and nn.TransformerDecoder
     nhead = 2  # the number of heads in the multiheadattention models
     dropout = 0.3  # the dropout value
     model = TransformerModel(in_tokens, out_tokens, emsize, nhead, nhid, nlayers, dropout).to(device)
