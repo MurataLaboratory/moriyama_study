@@ -1,9 +1,5 @@
 # 研究メモを書いていこうと思います
 
-## 現状の課題
-
-なし
-
 ## 各ディレクトリについて
 
 - code
@@ -70,6 +66,8 @@
 [github of Transformer](https://github.com/huggingface/transformers)
 
 [BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding](https://arxiv.org/abs/1810.04805)
+
+[論文解説 Attention Is All You Need (Transformer)](https://deeplearning.hatenablog.com/entry/transformer)
 
 </details>
 

@@ -305,7 +305,7 @@ def main():
     out_tokens = len(TRG.vocab.stoi)
     emsize = 768 # embedding dimension
     nhid = 1024 # the dimension of the feedforward network model in nn.TransformerEncoder and nn.TransformerDecoder
-    nlayers = 1  # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder and nn.TransformerDecoder
+    nlayers = 3  # the number of nn.TransformerEncoderLayer in nn.TransformerEncoder and nn.TransformerDecoder
     nhead = 2  # the number of heads in the multiheadattention models
     dropout = 0.3  # the dropout value
     model = TransformerModel(in_tokens, out_tokens, emsize, nhead, nhid, nlayers, dropout).to(device)
@@ -387,11 +387,11 @@ def main():
     test_percentage, test_kinds, test_bleu = eval_score(test_df)
     train_df = prepare_df(train_df)
     train_percentage, train_kinds, train_bleu = eval_score(train_df)
-    train_df.to_csv("../csv/train/result_transformer.csv")
-    test_df.to_csv("../csv/test/result_transformer.csv")
+    train_df.to_csv("../csv/train/result_transformer3.csv")
+    test_df.to_csv("../csv/test/result_transformer3.csv")
     print(f"TEST DATA: 一致率: {test_percentage}, 種類数: {test_kinds}, BLEU: {test_bleu}")
     print(f"TRAIN DATA: 一致率: {train_percentage}, 種類数: {train_kinds}, BLEU: {train_bleu}")
-    with open("./score/score_transformer.txt", mode="w") as f:
+    with open("./score/score_transformer3.txt", mode="w") as f:
         f.write(f"TEST DATA: 一致率: {test_percentage}, 種類数: {test_kinds}, BLEU: {test_bleu}\n")
         f.write(f"TRAIN DATA: 一致率: {train_percentage}, 種類数: {train_kinds}, BLEU: {train_bleu}")
     print("done!")

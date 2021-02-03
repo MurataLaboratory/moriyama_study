@@ -343,7 +343,7 @@ def main():
     train_data, valid_data = torch.utils.data.random_split(
         dataset, [train_size, valid_size])
 
-    batch_size = 64
+    batch_size = 128
     train_data_loader = torch.utils.data.DataLoader(
         train_data, batch_size)
     valid_data_loader = torch.utils.data.DataLoader(
