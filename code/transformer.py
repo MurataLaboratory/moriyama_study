@@ -387,11 +387,11 @@ def main():
     test_percentage, test_kinds, test_bleu = eval_score(test_df)
     train_df = prepare_df(train_df)
     train_percentage, train_kinds, train_bleu = eval_score(train_df)
-    train_df.to_csv("../csv/train/result_transformer3.csv")
-    test_df.to_csv("../csv/test/result_transformer3.csv")
+    train_df.to_csv("../csv/train/result_transformer.csv")
+    test_df.to_csv("../csv/test/result_transformer.csv")
     print(f"TEST DATA: 一致率: {test_percentage}, 種類数: {test_kinds}, BLEU: {test_bleu}")
     print(f"TRAIN DATA: 一致率: {train_percentage}, 種類数: {train_kinds}, BLEU: {train_bleu}")
-    with open("./score/score_transformer3.txt", mode="w") as f:
+    with open("./score/score_transformer.txt", mode="w") as f:
         f.write(f"TEST DATA: 一致率: {test_percentage}, 種類数: {test_kinds}, BLEU: {test_bleu}\n")
         f.write(f"TRAIN DATA: 一致率: {train_percentage}, 種類数: {train_kinds}, BLEU: {train_bleu}")
     print("done!")
