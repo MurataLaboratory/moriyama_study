@@ -18,7 +18,7 @@ from evaluate import eval_score
 
 print('hello world')
 
-
+# 使われていないGPU番号を取得する
 def get_freer_gpu():
     os.system('nvidia-smi -q -d Memory |grep -A4 GPU|grep Free >tmp')
     memory_available = [int(x.split()[2])
@@ -26,7 +26,7 @@ def get_freer_gpu():
     return np.argmax(memory_available)
 
 
-# 必要なモジュールのインポート
+# GPUの設定
 device = torch.device("cuda" if torch.cuda.is_available()
                       else "cpu", index=get_freer_gpu())
 
@@ -43,12 +43,10 @@ torch.backends.cudnn.deterministic = True
 j_t = Tokenizer()
 
 # 日本語を単語に分割したリストを返す関数
-
-
 def tokenizer(text):
     return [tok for tok in j_t.tokenize(text, wakati=True)]
 
-
+# データセットを作成する関数
 def choose_dataset(flag, SRC, TRG):
     if flag:
         train, val, test = data.TabularDataset.splits(
@@ -65,7 +63,7 @@ def choose_dataset(flag, SRC, TRG):
 
     return train, val, test, filename
 
-
+# Seq2seqのエンコーダ
 class Encoder(nn.Module):
     # Encoder層の設定
     def __init__(self, input_dim, emb_dim, hid_dim, n_layers, dropout):
@@ -87,7 +85,7 @@ class Encoder(nn.Module):
         outputs, (hidden, cell) = self.rnn(embedded)
         return hidden, cell
 
-
+# seq2seqのデコーダ
 class Decoder(nn.Module):
     def __init__(self, output_dim, emb_dim, hid_dim, n_layers, dropout):
         super().__init__()
@@ -118,7 +116,7 @@ class Decoder(nn.Module):
 
         return prediction, hidden, cell
 
-
+# Seq2seq
 class Seq2Seq(nn.Module):
     def __init__(self, encoder, decoder, device):
         super().__init__()
@@ -148,12 +146,12 @@ class Seq2Seq(nn.Module):
 
         return outputs
 
-
+# 重みの初期化
 def init_weights(m):
     for name, param in m.named_parameters():
         nn.init.uniform_(param.data, -0.08, 0.08)
 
-
+# モデルの学習をする関数う
 def train_model(model, iterator, optimizer, criterion, clip, TRG):
     model.train()
 
@@ -188,7 +186,7 @@ def train_model(model, iterator, optimizer, criterion, clip, TRG):
 
     return epoch_loss / len(iterator)
 
-
+# モデルの評価をする（学習の進捗）
 def evaluate_model(model, iterator, criterion):
     model.eval()
 
@@ -217,14 +215,14 @@ def evaluate_model(model, iterator, criterion):
 
         return epoch_loss / len(iterator)
 
-
+# 1エポックあたりの時間の計算
 def epoch_time(start_time, end_time):
     elapsed_time = end_time - start_time
     elapsed_mins = int(elapsed_time / 60)
     elapsed_secs = int(elapsed_time - (elapsed_mins*60))
     return elapsed_mins, elapsed_secs
 
-
+# 文章生成用の関数
 def gen_sentence(sentence, src_field, trg_field, model, max_len=50):
     model.eval()
 
@@ -259,7 +257,7 @@ def gen_sentence(sentence, src_field, trg_field, model, max_len=50):
     trg_tokens = [trg_field.vocab.itos[i] for i in trg_index]
     return trg_tokens
 
-
+# 全ての入力文に対して文を生成する
 def gen_sentence_list(model, path, SRC, TRG):
     col, pred = [], []
     input, output = [], []
@@ -276,7 +274,7 @@ def gen_sentence_list(model, path, SRC, TRG):
         bar.update(1)
     return input, output, pred
 
-
+# リストをDataframeに変換する
 def convert_list_to_df(in_list, out_list, pred_list):
     row = []
     for i in range(len(in_list)):
@@ -298,6 +296,7 @@ def convert_list_to_df(in_list, out_list, pred_list):
     df = df.sort_values('input')
     return df
 
+# 生成された文章に対して正解となる応答を全て集める
 def prepare_df(df):
     ans_df = pd.read_table("../data/data.tsv", header = None, names = ["input", "answer"]).sort_values('input')
     eval_df = pd.DataFrame(index=[], columns=["input", "answer"])
@@ -337,7 +336,7 @@ def main():
     eval_batch_size = 32
     train_iter, val_iter, test_iter = data.BucketIterator.splits((train, val, test), sort=False,
                                                                  batch_sizes=(train_batch_size, eval_batch_size, test_batch_size), device=device)
-
+    # ハイパーパラメータの設定
     INPUT_DIM = len(SRC.vocab)
     OUTPUT_DIM = len(TRG.vocab)
     ENC_EMB_DIM = 768
@@ -354,13 +353,15 @@ def main():
     model = Seq2Seq(enc, dec, device).to(device)
 
     print(model)
+    # モデルの重みの初期化
     model.apply(init_weights)
-
+    # 最適化手法の設定
     optimizer = optim.Adam(model.parameters(), lr=0.0001)
 
     SRC_PAD_IDX = SRC.vocab.stoi[SRC.pad_token]
-
+    # lossの計算用のやつ
     criterion = nn.CrossEntropyLoss(ignore_index=SRC_PAD_IDX)
+    # 学習率の自動最適化
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1.0, gamma=0.95)
 
     epochs = 100
@@ -389,7 +390,7 @@ def main():
         print("-"*65)
         print(
             f'Epoch: {epoch+1:02} | Time: {epoch_mins}m {epoch_secs}s | Train Loss: {train_loss:.3f} | Val. Loss: {valid_loss:.3f}')
-
+    # 重みの保存
     torch.save(best_model.state_dict(), '../model/seq2seq.pth')
 
     model.state_dict(torch.load("../model/seq2seq.pth"))
