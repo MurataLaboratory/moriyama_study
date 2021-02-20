@@ -395,20 +395,22 @@ def main():
 
     model.state_dict(torch.load("../model/seq2seq.pth"))
     print("generating sentence...")
+    # テストデータに対して文章を生成する
     path = "../data/test.tsv"
     test_input, test_output, test_pred = gen_sentence_list(
         model, path, SRC, TRG)
     test_df = convert_list_to_df(test_input, test_output, test_pred)
-
+    # 学習データに対して文章を生成する
     path = "../data/train.tsv"
     train_input, train_output, train_pred = gen_sentence_list(
         model, path, SRC, TRG)
     train_df = convert_list_to_df(train_input, train_output, train_pred)
-
+    # スコアの計算
     test_df = prepare_df(test_df)
     test_percentage, test_kinds, test_bleu = eval_score(test_df)
     train_df = prepare_df(train_df)
     train_percentage, train_kinds, train_bleu = eval_score(test_df)
+    # 結果の保存
     train_df.to_csv("../csv/train/result_Seq2seq.csv")
     test_df.to_csv("../csv/test/result_Seq2seq.csv")
     print(f"TEST DATA: 一致率: {test_percentage}, 種類数: {test_kinds}, BLEU: {test_bleu}")
